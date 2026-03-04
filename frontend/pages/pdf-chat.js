@@ -10,8 +10,7 @@ export default function PDFChat() {
     if (!token) {
       router.push("/login");
     }
-  }, [router]);
-
+  }, [router]);  
   return (
     <div style={styles.page}>
       <h1>📄 PDF Chat</h1>

@@ -8,13 +8,14 @@ embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 # ----------------------------
-# 🔹 Website Text Extraction
+# Extract Website Text
 # ----------------------------
 def extract_website_text(url):
+
     response = requests.get(
         url,
         timeout=10,
-        headers={"User-Agent": "Mozilla/5.0"},
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
     )
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -23,16 +24,17 @@ def extract_website_text(url):
         tag.decompose()
 
     text = soup.get_text(separator=" ")
-    cleaned = " ".join(text.split())
 
-    return cleaned
+    return " ".join(text.split())
 
 
 # ----------------------------
-# 🔹 Chunking
+# Chunk Text
 # ----------------------------
 def chunk_text(text, chunk_size=200):
+
     words = text.split()
+
     return [
         " ".join(words[i:i + chunk_size])
         for i in range(0, len(words), chunk_size)
@@ -40,28 +42,37 @@ def chunk_text(text, chunk_size=200):
 
 
 # ----------------------------
-# 🔹 CRAWLER
+# Crawl Website
 # ----------------------------
 def crawl_website(start_url, max_pages=50):
+
     visited = set()
     to_visit = [start_url]
 
     base_domain = urlparse(start_url).netloc
 
     while to_visit and len(visited) < max_pages:
+
         url = to_visit.pop(0)
 
         if url in visited:
             continue
 
         try:
-            response = requests.get(url, timeout=10)
+
+            response = requests.get(
+                    url,
+                    timeout=10,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                    }
+                )
             soup = BeautifulSoup(response.text, "html.parser")
 
             visited.add(url)
 
-            # Find internal links
             for link in soup.find_all("a", href=True):
+
                 full_url = urljoin(url, link["href"])
                 parsed = urlparse(full_url)
 
@@ -79,17 +90,18 @@ def crawl_website(start_url, max_pages=50):
 
 
 # ----------------------------
-# 🔹 FULL AUTO INDEXER
+# Index Website
 # ----------------------------
-def index_website_with_crawler():
-    start_url = "https://nuevesolutions.com/"
+def index_website_with_crawler(start_url):
 
     WebsiteChunk.objects.all().delete()
 
     urls = crawl_website(start_url, max_pages=80)
 
     for url in urls:
+
         try:
+
             text = extract_website_text(url)
 
             if not text or len(text) < 200:
@@ -98,6 +110,7 @@ def index_website_with_crawler():
             chunks = chunk_text(text)
 
             for chunk in chunks:
+
                 vector = embedding_model.encode(chunk).tolist()
 
                 WebsiteChunk.objects.create(

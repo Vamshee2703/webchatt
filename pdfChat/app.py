@@ -7,24 +7,32 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
 import os
+
 load_dotenv()
 
-# -------------------- SIDEBAR --------------------
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="PDF Chatbot",
+    page_icon="📄",
+    layout="wide"
+)
+
+# ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🤗💬 LLM Chat App")
     st.markdown("""
     ## About
-    This app is a PDF-based AI chatbot built using:
+    Chat with your PDF using AI.
+
+    **Tech Stack**
     - Streamlit
     - LangChain (RAG)
     - HuggingFace Embeddings
-    - Groq LLM (LLaMA-3)
+    - Groq LLaMA-3
     """)
     st.write("Made with ❤️ by Vamshee")
 
-# -------------------- GROQ CLIENT --------------------
-load_dotenv()
-
+# ---------------- GROQ CLIENT ----------------
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def query_llm(prompt: str) -> str:
@@ -33,7 +41,7 @@ def query_llm(prompt: str) -> str:
         messages=[
             {
                 "role": "system",
-                "content": "Answer strictly using the given context."
+                "content": "Answer ONLY using the provided context."
             },
             {
                 "role": "user",
@@ -41,67 +49,111 @@ def query_llm(prompt: str) -> str:
             }
         ],
         temperature=0.1,
-        max_tokens=300,
+        max_tokens=400,
     )
     return response.choices[0].message.content
 
-# -------------------- MAIN APP --------------------
+
+# ---------------- PDF PROCESSING ----------------
+def process_pdf(pdf):
+
+    pdf_reader = PdfReader(pdf)
+    text = ""
+
+    for page in pdf_reader.pages:
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200
+    )
+
+    chunks = text_splitter.split_text(text)
+
+    store_name = pdf.name.replace(".pdf", "")
+
+    if os.path.exists(f"{store_name}.pkl"):
+        with open(f"{store_name}.pkl", "rb") as f:
+            vectorstore = pickle.load(f)
+    else:
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
+
+        vectorstore = FAISS.from_texts(chunks, embeddings)
+
+        with open(f"{store_name}.pkl", "wb") as f:
+            pickle.dump(vectorstore, f)
+
+    return vectorstore
+
+
+# ---------------- MAIN APP ----------------
 def main():
-    st.header("📄 Chat with PDF")
+
+    st.title("📄 Chat with Your PDF")
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
     pdf = st.file_uploader("Upload your PDF", type="pdf")
 
     if pdf is not None:
-        pdf_reader = PdfReader(pdf)
-        text = ""
 
-        for page in pdf_reader.pages:
-            extracted = page.extract_text()
-            if extracted:
-                text += extracted
+        vectorstore = process_pdf(pdf)
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50
-        )
-        chunks = text_splitter.split_text(text)
+        # display previous messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
 
-        store_name = pdf.name.replace(".pdf", "")
-
-        if os.path.exists(f"{store_name}.pkl"):
-            with open(f"{store_name}.pkl", "rb") as f:
-                vectorstore = pickle.load(f)
-        else:
-            embeddings = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2"
-            )
-            vectorstore = FAISS.from_texts(chunks, embeddings)
-            with open(f"{store_name}.pkl", "wb") as f:
-                pickle.dump(vectorstore, f)
-
-        query = st.text_input("Ask a question about your PDF")
+        query = st.chat_input("Ask a question about your PDF")
 
         if query:
-            docs = vectorstore.similarity_search(query, k=2)
+
+            # show user message
+            st.session_state.messages.append(
+                {"role": "user", "content": query}
+            )
+
+            with st.chat_message("user"):
+                st.write(query)
+
+            docs = vectorstore.max_marginal_relevance_search(query, k=5)
+
             context = "\n\n".join(doc.page_content for doc in docs)
 
             prompt = f"""
-Answer the question using ONLY the context below.
+You are an AI assistant answering questions about a PDF.
+
+Use ONLY the context below.
+
+If the answer is not in the document say:
+"The answer is not available in the document."
 
 Context:
 {context}
 
 Question:
 {query}
+
+Answer:
 """
 
             with st.spinner("Thinking... ⚡"):
                 answer = query_llm(prompt)
 
-            st.subheader("Answer")
-            st.write(answer)
+            # show AI response
+            with st.chat_message("assistant"):
+                st.write(answer)
 
-# -------------------- RUN --------------------
+            st.session_state.messages.append(
+                {"role": "assistant", "content": answer}
+            )
+
+
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     main()
-

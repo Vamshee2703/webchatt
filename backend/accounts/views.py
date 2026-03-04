@@ -10,14 +10,44 @@ from .models import ChatMessage
 from .permissions import IsEmployee
 from .serializers import SignupSerializer
 from .services.llm import ask_llm
+from .utils import index_website_with_crawler
 
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
+# -----------------------------
+# Crawl Website API
+# -----------------------------
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def crawl_website(request):
+
+    url = request.data.get("url")
+
+    if not url:
+        return Response({"error": "URL is required"}, status=400)
+
+    try:
+        index_website_with_crawler(url)
+
+        return Response({
+            "message": "Website crawled and indexed successfully"
+        })
+
+    except Exception as e:
+        return Response({
+            "error": str(e)
+        }, status=500)
+
+
+# -----------------------------
+# Copilot Chat API
+# -----------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def copilot(request):
+
     question = request.data.get("question", "").strip()
 
     if not question:
@@ -30,10 +60,10 @@ def copilot(request):
         content=question,
     )
 
-    # 🔹 Ask LLM (crawler-based)
+    # Ask LLM
     answer = ask_llm(question)
 
-    # Save bot message
+    # Save bot response
     ChatMessage.objects.create(
         user=request.user,
         role="bot",
@@ -43,18 +73,31 @@ def copilot(request):
     return Response({"answer": answer})
 
 
+# -----------------------------
+# Signup API
+# -----------------------------
 @api_view(["POST"])
 def signup(request):
+
     serializer = SignupSerializer(data=request.data)
+
     if serializer.is_valid():
         serializer.save()
-        return Response({"message": "User created successfully"}, status=201)
+        return Response(
+            {"message": "User created successfully"},
+            status=201
+        )
+
     return Response(serializer.errors, status=400)
 
 
+# -----------------------------
+# Employee Profile API
+# -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsEmployee])
 def employee_me(request):
+
     return Response({
         "id": request.user.id,
         "email": request.user.email,
@@ -63,11 +106,22 @@ def employee_me(request):
     })
 
 
+# -----------------------------
+# Chat History API
+# -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def chat_history(request):
-    chats = ChatMessage.objects.filter(user=request.user).order_by("created_at")
+
+    chats = ChatMessage.objects.filter(
+        user=request.user
+    ).order_by("created_at")
+
     return Response([
-        {"role": c.role, "text": c.content, "created_at": c.created_at}
+        {
+            "role": c.role,
+            "text": c.content,
+            "created_at": c.created_at
+        }
         for c in chats
     ])
