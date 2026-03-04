@@ -1,323 +1,441 @@
 # Web Copilot – Context-Aware Website Chatbot
 
-A **Web Copilot** system that embeds a chatbot beside a website and answers user queries **contextually based on the website’s content**, using **LLMs** and a **secure backend indexing approach**.
+A **Web Copilot system** that embeds a chatbot beside a website and answers user queries **contextually based on the website’s content**, using **Large Language Models (LLMs)** and a **secure backend crawling and indexing approach**.
 
 ---
 
-## 🚀 Project Overview
+# 🚀 Project Overview
 
-Modern websites often require an intelligent assistant to help users understand content quickly.  
-This project builds a **website-aware AI copilot** that:
+Modern websites often require an intelligent assistant to help users understand information quickly.
+This project builds a **website-aware AI copilot** that allows users to interact with website content through natural language.
 
-- Runs alongside a website (via iframe)
-- Answers questions **based on the website’s content**
-- Uses a backend indexing strategy to overcome browser security limitations
-- Supports **Employee Login & Signup authentication**
+The system works by:
+
+* Embedding a website using **iframe**
+* Crawling website content from the backend
+* Processing the content using **LLM-based AI**
+* Generating **context-aware responses**
+
+The system also supports **secure user authentication and document-based chat (PDF chat).**
 
 ---
 
-## 🎯 Problem Statement
+# 🎯 Problem Statement
 
-Web-based chatbots cannot directly read iframe content due to browser security (same-origin policy).  
+Modern chatbots cannot directly read the content of websites embedded in an **iframe** because of browser security restrictions known as the **Same-Origin Policy**.
+
+Therefore, the chatbot cannot access the website content directly from the frontend.
+
 This project solves the problem by:
 
-- Indexing website content in the backend
-- Injecting indexed content into LLM prompts
-- Providing accurate, context-aware responses
+1. Crawling website content in the **backend**
+2. Extracting useful text data
+3. Injecting the extracted content into the **LLM prompt**
+4. Generating **accurate context-aware responses**
 
 ---
 
-## 🧠 Key Features
+# 🧠 Key Features
 
-- Website embedded via iframe
-- Chatbot UI beside website
-- Backend-powered AI responses
-- Context-aware answers (website-specific)
-- Employee Login & Signup authentication
-- Secure API communication
-- Modular & scalable architecture
-
----
-
-## 🛠 Tech Stack
-
-### Frontend
-- Next.js
-- React
-- CSS (custom styling)
-- iframe embedding
-
-### Backend
-- Python
-- Django
-- Django REST Framework
-- JWT Authentication (SimpleJWT)
-
-### AI / LLM
-- Groq / Hugging Face (LLM provider)
-- Prompt engineering
-- Error-handled AI calls
-
-### Tools
-- Git & GitHub
-- Postman (API testing)
+* Website embedded via **iframe**
+* Chatbot panel beside the website
+* **Dynamic website crawling**
+* **Context-aware chatbot responses**
+* **PDF document chat**
+* Employee **Login & Signup authentication**
+* Secure backend API architecture
+* LLM-powered intelligent responses
+* Modular full-stack system
 
 ---
 
-## 🏗 Project Structure
+# 🛠 Tech Stack
+
+## Frontend
+
+* Next.js
+* React
+* CSS
+* iframe embedding
+
+## Backend
+
+* Python
+* Django
+* Django REST Framework
+* JWT Authentication (SimpleJWT)
+
+## AI / LLM
+
+* Groq LLM API
+* Hugging Face models
+* Prompt Engineering
+* Context Injection
+
+## Data Processing
+
+* Requests
+* BeautifulSoup (Website Crawling)
+* PDF parsing
+
+## Tools
+
+* Git & GitHub
+* Postman (API testing)
+
+---
+
+# 🏗 Project Architecture
+
+User interacts with chatbot beside the website.
+
+System Flow:
+
+User Question
+↓
+Frontend Chat Interface (Next.js)
+↓
+Django Backend API
+↓
+Website Content Crawling
+↓
+Content Extraction
+↓
+LLM Prompt Injection
+↓
+LLM Generates Answer
+↓
+Response Returned to User
+
+---
+
+# 📂 Project Structure
+
 project-root/
-├── frontend/
-│ ├── pages/
-│ │ ├── login.js
-│ │ ├── signup.js
-│ │ └── index.js
-│ ├── styles/
-│ └── public/
-│
-├── backend/
-│ ├── webcopilot/
-│ ├── users/
-│ ├── manage.py
-│
-├── README.md
-└── .gitignore
 
+frontend/
+    pages/
+        login.js
+        signup.js
+        index.js
+
+    components/
+        chatbot.js
+
+    styles/
+    public/
+
+backend/
+    webcopilot/
+        views.py
+        urls.py
+        crawler.py
+
+    users/
+        models.py
+        views.py
+        serializers.py
+
+    manage.py
+
+README.md
+.gitignore
 
 ---
 
-## 🔐 Authentication Setup (Login & Signup)
+# 🔐 Authentication System
 
-### 🔑 Authentication Flow
+The system supports **secure employee authentication**.
+
+## Authentication Flow
 
 1. User signs up using email, username, and password
-2. Django creates a user record
+2. Django creates a user account
 3. User logs in using credentials
 4. Backend returns:
-   - Access token
-   - Refresh token (JWT)
-5. Frontend stores tokens in `localStorage`
-6. Protected routes are accessed using access token
+
+* Access Token
+* Refresh Token
+
+5. Frontend stores tokens in **localStorage**
+6. Protected APIs require the access token
 
 ---
 
-### 🧩 Backend (Django)
+## Backend Authentication (Django)
 
-- Custom User model
-- JWT authentication using `djangorestframework-simplejwt`
-- Endpoints:
+Uses:
+
+djangorestframework-simplejwt
+
+### API Endpoints
 
 POST /api/signup/
 POST /api/login/
 POST /api/refresh/
 
-
-- CORS enabled for frontend communication
-- CSRF exempted for API endpoints
+CORS is enabled for frontend communication.
 
 ---
 
-### 🧩 Frontend (Next.js)
+# 📄 Additional Feature – PDF Chat
 
-- Login & Signup pages
-- Fetch API calls to Django backend
-- Token storage in `localStorage`
-- Redirects after successful authentication
+Users can upload a **PDF document** and ask questions related to the document.
 
----
+Workflow:
 
-## 🟢 8-Week Development Plan
-
-### 🟢 Week 1 – Problem Understanding & Setup
-**Goals**
-- Understand the problem clearly
-- Set up development environment
-
-**Tasks**
-- Finalize problem statement
-- Study:
-- How copilots work
-- LLM basics
-- iframe & browser security
-- Install & configure:
-- Python + Django
-- Node.js + Next.js
-- Git & GitHub
-- Create project structure
-
-**Deliverables**
-- ✅ Problem statement document
-- ✅ GitHub repository
-- ✅ Local dev environment working
+User uploads PDF
+↓
+PDF text extracted
+↓
+Text sent to LLM
+↓
+User asks question
+↓
+LLM answers using PDF context
 
 ---
 
-### 🟢 Week 2 – Frontend UI + Website Embedding
-**Goals**
-- Build the copilot UI
-- Embed website beside chatbot
+# ⚙️ Installation & Setup
 
-**Tasks**
-- Create Next.js pages
-- Design layout:
-- Left → iframe (website)
-- Right → chatbot panel
-- Handle iframe loading issues
-- Add chatbot UI
+## 1️⃣ Clone the Repository
 
-**Deliverables**
-- ✅ Website embedded using iframe
-- ✅ Copilot UI visible and usable
+git clone https://github.com/yourusername/web-copilot.git
+
+cd web-copilot
 
 ---
 
-### 🟢 Week 3 – Backend API (Django + REST)
-**Goals**
-- Build backend API for chatbot
+# 🖥 Running the Backend (Django)
 
-**Tasks**
-- Create Django project
-- Create `webcopilot` app
-- Build REST endpoint:
+Navigate to backend folder:
+
+cd backend
+
+Create virtual environment:
+
+python -m venv venv
+
+Activate virtual environment
+
+Windows:
+
+venv\Scripts\activate
+
+Install dependencies:
+
+pip install -r requirements.txt
+
+Run migrations:
+
+python manage.py migrate
+
+Start Django server:
+
+python manage.py runserver
+
+Backend will run at:
+
+http://127.0.0.1:8000/
+
+---
+
+# 🌐 Running the Frontend (Next.js)
+
+Navigate to frontend folder:
+
+cd frontend
+
+Install dependencies:
+
+npm install
+
+Start development server:
+
+npm run dev
+
+Frontend will run at:
+
+http://localhost:3000/
+
+---
+
+# 📄 Using PDF Chat Feature
+
+1. Open the chatbot interface
+2. Upload a PDF file
+3. The system extracts the text content
+4. Ask questions related to the uploaded document
+
+Example API endpoint:
+
+POST /api/pdf-chat/
+
+Example request:
+
+Upload PDF → Extract text → Send question → LLM generates answer
+
+---
+
+# 🟢 8-Week Development Plan
+
+## Week 1 – Problem Understanding & Setup
+
+* Finalize problem statement
+* Study copilot architecture
+* Install development tools
+* Setup project repository
+
+Deliverables
+
+* Problem statement
+* GitHub repository
+* Development environment
+
+---
+
+## Week 2 – Frontend UI & Website Embedding
+
+* Develop Next.js interface
+* Build chatbot UI
+* Embed website using iframe
+
+Deliverables
+
+* Copilot UI
+* Embedded website
+
+---
+
+## Week 3 – Backend API & Authentication
+
+* Django backend setup
+* Implement authentication
+* Create chatbot API
 
 POST /api/ask/
 
-- Enable:
-- CORS
-- CSRF exemption
-- Test API with dummy responses
+Additional work completed:
 
-**Deliverables**
-- ✅ Django API working
-- ✅ Frontend → Backend communication
+* PDF chat feature
+* Basic website crawler
 
----
+Deliverables
 
-### 🟢 Week 4 – LLM Integration
-**Goals**
-- Make chatbot intelligent
-
-**Tasks**
-- Study LLM providers (Groq, Hugging Face)
-- Integrate LLM
-- Handle:
-- Timeouts
-- Errors
-- Deprecation issues
-- Add “Thinking…” UI
-
-**Deliverables**
-- ✅ AI-generated answers
-- ✅ Error-handled LLM calls
+* Backend APIs working
+* Authentication implemented
 
 ---
 
-### 🟢 Week 5 – Website Content Indexing (Core Feature)
-**Goals**
-- Make answers website-contextual
+## Week 4 – LLM Integration
 
-**Tasks**
-- Explain iframe limitation
-- Implement backend indexing:
-- Manual content file OR
-- Auto crawler
-- Inject website content into prompts
+* Integrate Groq / HuggingFace LLM
+* Handle API errors
+* Implement loading UI
 
-**Deliverables**
-- ✅ Context-aware chatbot
-- ✅ Website-specific answers
+Deliverables
+
+* AI generated responses
 
 ---
 
-### 🟢 Week 6 – Enhancements & UX Improvements
-**Goals**
-- Improve accuracy & UX
+## Week 5 – Dynamic Website Crawling
 
-**Tasks**
-- Loading states
-- Error messages
-- Clear chat history
-- Prompt refinement
-- Hallucination reduction
-- UI improvements
+* Accept website URL
+* Crawl website using requests & BeautifulSoup
+* Extract website content
+* Inject content into LLM prompt
 
-**Deliverables**
-- ✅ Better answers
-- ✅ Stable UI
+System Flow
 
----
+User enters website URL
+↓
+Backend crawls website
+↓
+Content extracted
+↓
+LLM generates answer
 
-### 🟢 Week 7 – Testing, Security & Optimization
-**Goals**
-- Make project review-ready
+Deliverables
 
-**Tasks**
-- Edge case testing
-- Multiple question testing
-- Explain security:
-- iframe limitations
-- backend indexing
-- Optimize:
-- Prompt size
-- Response time
-
-**Deliverables**
-- ✅ Stable build
-- ✅ Security explanation
+* Dynamic website chatbot
 
 ---
 
-### 🟢 Week 8 – Documentation & Final Demo
-**Goals**
-- Prepare for evaluation
+## Week 6 – UX Improvements
 
-**Tasks**
-- Architecture diagram
-- Sequence diagram
-- System flow explanation
-- README
-- Demo script
-- Future scope
+* Chat history
+* Clear chat button
+* Loading indicators
+* Prompt improvements
+* UI improvements
 
-**Deliverables**
-- ✅ Final demo
-- ✅ Complete documentation
-- ✅ Confident explanation
+Deliverables
+
+* Better chatbot UX
 
 ---
 
-## 🔒 Security Explanation
+## Week 7 – Testing & Optimization
 
-### Why iframe content isn’t read?
-- Browser **Same-Origin Policy**
-- JavaScript cannot access iframe DOM from another origin
+* Test with multiple websites
+* Handle invalid URLs
+* Optimize prompt size
+* Improve performance
 
-### Why backend indexing?
-- Backend fetches & stores website content
-- Content injected into LLM prompt securely
-- Prevents frontend security violations
+Deliverables
 
----
-
-## 🚧 Future Scope
-
-- Vector database (FAISS / Pinecone)
-- User role-based access
-- Multi-website support
-- Conversation memory
-- Admin dashboard
-- Analytics & logging
+* Stable build
 
 ---
 
-## 📌 Conclusion
+## Week 8 – Documentation & Final Demo
 
-This project demonstrates a **real-world AI copilot system** with strong fundamentals in:
-- Web security
-- Full-stack development
-- LLM integration
-- System design & documentation
+* Architecture diagram
+* Sequence diagram
+* System documentation
+* Demo preparation
+
+Deliverables
+
+* Final project presentation
 
 ---
 
-👨‍💻 **Author:** vamshee
-📅 **Duration:** 8 Weeks  
+# 🔒 Security Considerations
+
+## iframe Limitation
+
+Browser **Same-Origin Policy** prevents accessing iframe content from another domain.
+
+## Backend Crawling Solution
+
+The backend safely retrieves website content and provides it to the chatbot.
+
+---
+
+# 🚧 Future Scope
+
+* Vector database (FAISS / Pinecone)
+* Retrieval Augmented Generation (RAG)
+* Multi-website indexing
+* Chat memory
+* Admin dashboard
+* Analytics
+
+---
+
+# 📌 Conclusion
+
+This project demonstrates a **real-world AI Copilot system** integrating:
+
+* Full-stack web development
+* LLM-powered chat systems
+* Backend crawling architecture
+* Secure authentication
+* Context-aware AI responses
+
+---
+
+👨‍💻 Author: **Vamshee**
+📅 Project Duration: **8 Weeks**

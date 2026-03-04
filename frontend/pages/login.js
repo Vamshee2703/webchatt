@@ -20,7 +20,6 @@ export default function Login() {
     );
 
     const data = await res.json();
-
     if (!res.ok) {
       setError("Invalid email or password");
       return;
@@ -28,31 +27,27 @@ export default function Login() {
 
     localStorage.setItem("access", data.access);
     localStorage.setItem("refresh", data.refresh);
-    router.push("/home");
+    router.push("/dashboard");
   };
 
   return (
     <div className="auth-bg">
-      <div className="auth-card">
-        <div className="auth-side-image" />
-
+      <div className="auth-card" style={{margin:'10px'}}>
         <div className="auth-form">
-          <h2>Employee Login</h2>
+          <h2>Welcome Back 👋</h2>
+          <p className="auth-subtitle">Login to Web Copilot</p>
 
-          <input
-            placeholder="Email"
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <input placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
+          <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
 
-          <input
-            type="password"
-            placeholder="Password"
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <button onClick={handleLogin}>Sign In</button>
 
-          <button onClick={handleLogin}>Login</button>
+          {error && <p className="auth-error">{error}</p>}
 
-          {error && <p style={{ color: "red" }}>{error}</p>}
+          <div className="auth-link">
+            Don’t have an account?{" "}
+            <span onClick={() => router.push("/signup")}>Sign up</span>
+          </div>
         </div>
       </div>
     </div>

@@ -17,24 +17,28 @@ export default function Navbar() {
       setIsAuth(!!token);
     };
 
-    // initial check
     checkAuth();
-
-    // re-check auth on route change
     router.events.on("routeChangeComplete", checkAuth);
 
     return () => {
       router.events.off("routeChangeComplete", checkAuth);
     };
-  }, []);
+  }, [router.events]);
 
-  // prevent hydration mismatch
   if (!mounted) return null;
 
   return (
     <nav style={styles.nav}>
-      <h3 style={styles.logo}>ChatAI</h3>
+      {/* LOGO + TITLE */}
+      <div
+        style={styles.logoBox}
+        onClick={() => router.push(isAuth ? "/dashboard" : "/")}
+      >
+        <img src="/logo.webp" alt="ChatAI" style={styles.logoImg} />
+        <span style={styles.logoText}>ChatAI</span>
+      </div>
 
+      {/* LINKS */}
       <div style={styles.links}>
         {isAuth ? (
           <>
@@ -68,36 +72,64 @@ export default function Navbar() {
     </nav>
   );
 }
-
 const styles = {
   nav: {
-    background: "#111827",
-    color: "#ffffff",
-    padding: "14px 28px",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "64px",
+    padding: "0 28px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+
+    background: "rgba(17, 24, 39, 0.7)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    zIndex: 1000,
   },
-  logo: {
-    margin: 0,
+
+  logoBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    cursor: "pointer",
+  },
+
+  logoImg: {
+    width: "34px",
+    height: "34px",
+    objectFit: "contain",
+    animation: "logoFloat 4s ease-in-out infinite",
+  },
+
+  logoText: {
+    fontSize: "18px",
     fontWeight: 600,
+    color: "#ffffff",
   },
+
   links: {
     display: "flex",
     alignItems: "center",
     gap: "18px",
   },
+
   link: {
     color: "#e5e7eb",
     textDecoration: "none",
     fontWeight: 500,
   },
+
   logout: {
-    background: "#ef4444",
+    background: "linear-gradient(135deg, #ef4444, #dc2626)",
     color: "#ffffff",
     border: "none",
     padding: "8px 14px",
-    borderRadius: "6px",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 };
