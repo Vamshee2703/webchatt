@@ -74,23 +74,21 @@ export default function Navbar() {
 }
 const styles = {
   nav: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "64px",
-    padding: "0 28px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "64px",
+  padding: "0 28px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
 
-    background: "rgba(17, 24, 39, 0.7)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+  background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
 
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-    zIndex: 1000,
-  },
+  borderBottom: "1px solid rgba(255,255,255,0.15)",
+  zIndex: 1000,
+},
 
   logoBox: {
     display: "flex",

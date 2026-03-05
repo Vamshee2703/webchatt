@@ -121,26 +121,34 @@ def main():
             with st.chat_message("user"):
                 st.write(query)
 
-            docs = vectorstore.max_marginal_relevance_search(query, k=5)
-
+            docs = vectorstore.similarity_search(query, k=8)
             context = "\n\n".join(doc.page_content for doc in docs)
 
             prompt = f"""
-You are an AI assistant answering questions about a PDF.
+                You are an AI assistant answering questions about a PDF.
 
-Use ONLY the context below.
+                Use ONLY the context below.
 
-If the answer is not in the document say:
-"The answer is not available in the document."
+                If the answer is not in the document say:
+                "The answer is not available in the document."
 
-Context:
-{context}
+                IMPORTANT:
+                If the user asks for a list (like subjects, names, topics, etc),
+                return each item on a NEW LINE without bullets.
 
-Question:
-{query}
+                Example format:
+                Subject 1
+                Subject 2
+                Subject 3
 
-Answer:
-"""
+                Context:
+                {context}
+
+                Question:
+                {query}
+
+                Answer:
+                """
 
             with st.spinner("Thinking... ⚡"):
                 answer = query_llm(prompt)

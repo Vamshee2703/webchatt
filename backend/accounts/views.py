@@ -2,11 +2,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
 from groq import Groq
 import os
-
-from .models import ChatMessage
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from .models import ChatMessage, WebsiteChunk
 from .permissions import IsEmployee
 from .serializers import SignupSerializer
 from .services.llm import ask_llm
@@ -14,6 +14,9 @@ from .utils import index_website_with_crawler
 
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# Embedding model
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 # -----------------------------
@@ -60,8 +63,53 @@ def copilot(request):
         content=question,
     )
 
-    # Ask LLM
-    answer = ask_llm(question)
+    # 🔹 Get last 6 chat messages (history)
+    history_messages = ChatMessage.objects.filter(
+        user=request.user
+    ).order_by("-created_at")[:6]
+
+    history_text = ""
+
+    for msg in reversed(history_messages):
+        history_text += f"{msg.role}: {msg.content}\n"
+
+    # 🔹 Convert question to embedding
+    question_vector = embedding_model.encode(question)
+
+    # 🔹 Get all website chunks
+    chunks = WebsiteChunk.objects.all()
+
+    scores = []
+
+    for chunk in chunks:
+
+        chunk_vector = np.array(chunk.embedding)
+
+        similarity = np.dot(question_vector, chunk_vector) / (
+            np.linalg.norm(question_vector) * np.linalg.norm(chunk_vector)
+        )
+
+        scores.append((similarity, chunk.content))
+
+    # 🔹 Sort by similarity
+    scores.sort(reverse=True)
+
+    # 🔹 Take top 5 chunks
+    top_chunks = [content for _, content in scores[:5]]
+
+    context = "\n".join(top_chunks)
+
+    # 🔹 Combine history + website context
+    full_context = f"""
+Conversation History:
+{history_text}
+
+Website Content:
+{context}
+"""
+
+    # 🔹 Ask LLM
+    answer = ask_llm(question, full_context)
 
     # Save bot response
     ChatMessage.objects.create(
@@ -71,8 +119,6 @@ def copilot(request):
     )
 
     return Response({"answer": answer})
-
-
 # -----------------------------
 # Signup API
 # -----------------------------

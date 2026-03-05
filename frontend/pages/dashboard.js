@@ -12,39 +12,40 @@ export default function Dashboard() {
     }
   }, [router]);
 
-const startChat = async () => {
-  if (!url) {
-    alert("Please enter a website URL");
-    return;
-  }
+  const startChat = async () => {
+    if (!url) {
+      alert("Please enter a website URL");
+      return;
+    }
 
-  let formattedUrl = url;
-  if (!url.startsWith("http")) {
-    formattedUrl = "https://" + url;
-  }
+    let formattedUrl = url;
+    if (!url.startsWith("http")) {
+      formattedUrl = "https://" + url;
+    }
 
-  const token = localStorage.getItem("access");
+    const token = localStorage.getItem("access");
 
-  await fetch("http://127.0.0.1:8000/api/crawl/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ url: formattedUrl }),
-  });
+    fetch("http://127.0.0.1:8000/api/crawl/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ url: formattedUrl }),
+    });
 
-  router.push(`/copilot?url=${encodeURIComponent(formattedUrl)}`);
-};
+    router.push(`/copilot?url=${encodeURIComponent(formattedUrl)}`);
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.heading}>Web Copilot Dashboard</h1>
+        <h1 style={styles.heading}>AI Knowledge Hub</h1>
 
         <div style={styles.card}>
-          <h2>🌐 Chat With Any Website</h2>
+          <h2>Ask Anything From Websites or PDFs</h2>
 
-          <p>Enter a website URL and start chatting with its content.</p>
+          <p>Enter a website URL or open the PDF assistant.</p>
 
           <input
             type="text"
@@ -54,22 +55,19 @@ const startChat = async () => {
             style={styles.input}
           />
 
-          <button style={styles.button} onClick={startChat}>
-            Start Web Chat
-          </button>
+          {/* BUTTON ROW */}
+          <div style={styles.buttonRow}>
+            <button style={styles.button} onClick={startChat}>
+              Start Web Chat
+            </button>
 
-          <hr style={styles.divider} />
-
-          <h2>📄 PDF Chat</h2>
-
-          <p>Upload a PDF and chat with your document.</p>
-
-          <button
-            style={styles.button}
-            onClick={() => window.open("http://localhost:8501", "_blank")}
-          >
-          Open PDF Chat
-          </button>
+            <button
+              style={styles.button}
+              onClick={() => window.open("http://localhost:8501", "_blank")}
+            >
+              Open PDF Chat
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -86,7 +84,7 @@ const styles = {
 
   container: {
     width: "100%",
-    maxWidth: "420px",
+    maxWidth: "500px",
     textAlign: "center",
   },
 
@@ -102,7 +100,7 @@ const styles = {
     boxShadow: "0 15px 40px rgba(0,0,0,0.4)",
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: "16px",
   },
 
   input: {
@@ -114,29 +112,20 @@ const styles = {
     color: "#fff",
   },
 
+  buttonRow: {
+    display: "flex",
+    gap: "12px",
+    justifyContent: "center",
+  },
+
   button: {
+    flex: 1,
     padding: "12px",
     borderRadius: "10px",
     border: "none",
     cursor: "pointer",
     fontWeight: "600",
-    background: "linear-gradient(135deg,#22c55e,#4ade80)",
-    color: "#052e16",
-  },
-
-  pdfButton: {
-    padding: "12px",
-    borderRadius: "10px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "600",
-    background: "rgba(255,255,255,0.15)",
-    color: "#fff",
-  },
-
-  divider: {
-    border: "none",
-    borderTop: "1px solid rgba(255,255,255,0.1)",
-    margin: "10px 0",
+    background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+    color: "#ffffff",
   },
 };

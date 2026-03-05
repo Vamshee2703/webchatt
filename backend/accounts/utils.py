@@ -96,7 +96,7 @@ def index_website_with_crawler(start_url):
 
     WebsiteChunk.objects.all().delete()
 
-    urls = crawl_website(start_url, max_pages=80)
+    urls = crawl_website(start_url, max_pages=20)
 
     for url in urls:
 
