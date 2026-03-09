@@ -16,6 +16,7 @@ from .utils import index_website_with_crawler
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # Embedding model
+
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 

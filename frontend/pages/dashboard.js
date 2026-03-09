@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/router";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [url, setUrl] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -12,60 +11,27 @@ export default function Dashboard() {
     }
   }, [router]);
 
-  const startChat = async () => {
-    if (!url) {
-      alert("Please enter a website URL");
-      return;
-    }
-
-    let formattedUrl = url;
-    if (!url.startsWith("http")) {
-      formattedUrl = "https://" + url;
-    }
-
-    const token = localStorage.getItem("access");
-
-    fetch("http://127.0.0.1:8000/api/crawl/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ url: formattedUrl }),
-    });
-
-    router.push(`/copilot?url=${encodeURIComponent(formattedUrl)}`);
-  };
-
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.heading}>AI Knowledge Hub</h1>
-
         <div style={styles.card}>
           <h2>Ask Anything From Websites or PDFs</h2>
 
-          <p>Enter a website URL or open the PDF assistant.</p>
+          <p>Select what you want to chat with.</p>
 
-          <input
-            type="text"
-            placeholder="https://example.com"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            style={styles.input}
-          />
-
-          {/* BUTTON ROW */}
           <div style={styles.buttonRow}>
-            <button style={styles.button} onClick={startChat}>
-              Start Web Chat
+            <button
+              style={styles.button}
+              onClick={() => router.push("/webchat")}
+            >
+              Web Chat
             </button>
 
             <button
               style={styles.button}
               onClick={() => window.open("http://localhost:8501", "_blank")}
             >
-              Open PDF Chat
+              PDF Chat
             </button>
           </div>
         </div>
@@ -88,10 +54,6 @@ const styles = {
     textAlign: "center",
   },
 
-  heading: {
-    marginBottom: "24px",
-  },
-
   card: {
     background: "#000",
     color: "#fff",
@@ -101,15 +63,6 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-  },
-
-  input: {
-    padding: "12px",
-    borderRadius: "10px",
-    border: "none",
-    outline: "none",
-    background: "rgba(255,255,255,0.1)",
-    color: "#fff",
   },
 
   buttonRow: {
