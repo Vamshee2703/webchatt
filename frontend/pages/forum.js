@@ -2,70 +2,160 @@ import { useEffect, useState } from "react";
 
 export default function Forum() {
 
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [answerText, setAnswerText] = useState({});
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [message, setMessage] = useState("");
-  const [showQuestions, setShowQuestions] = useState(false);
-  const [editingQuestionId, setEditingQuestionId] = useState(null);
-  const [editingAnswerId, setEditingAnswerId] = useState(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editAnswerText, setEditAnswerText] = useState("");
+  const [questions,setQuestions] = useState([]);
+  const [answers,setAnswers] = useState({});
+  const [answerText,setAnswerText] = useState({});
+  const [title,setTitle] = useState("");
+  const [description,setDescription] = useState("");
+  const [message,setMessage] = useState("");
+  const [showQuestions,setShowQuestions] = useState(false);
+
+  const [currentUser,setCurrentUser] = useState(null);
+
+  const [editingQuestionId,setEditingQuestionId] = useState(null);
+  const [editingAnswerId,setEditingAnswerId] = useState(null);
+
+  const [editTitle,setEditTitle] = useState("");
+  const [editDescription,setEditDescription] = useState("");
+  const [editAnswerText,setEditAnswerText] = useState("");
 
   const token =
     typeof window !== "undefined"
       ? localStorage.getItem("access")
       : null;
 
-  // Load questions
-  const loadQuestions = async () => {
+  /* ---------------- LOAD USER ---------------- */
+
+  useEffect(()=>{
+
+    const loadUser = async()=>{
+
+      if(!token) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/profile/",
+        {
+          headers:{
+            Authorization:`Bearer ${token}`
+          }
+        }
+      );
+
+      if(res.ok){
+        const data = await res.json();
+        setCurrentUser(data.username);
+      }
+
+    };
+
+    loadUser();
+
+  },[]);
+
+  /* ---------------- LOAD QUESTIONS ---------------- */
+
+  const loadQuestions = async()=>{
+
     const res = await fetch(
       "http://127.0.0.1:8000/api/forum/questions/"
     );
+
     const data = await res.json();
+
     setQuestions(data);
+
   };
 
-  useEffect(() => {
+  useEffect(()=>{
     loadQuestions();
-  }, []);
+  },[]);
 
-  // Post Question
-  const postQuestion = async () => {
+  /* ---------------- POST QUESTION ---------------- */
+
+  const postQuestion = async()=>{
 
     const res = await fetch(
       "http://127.0.0.1:8000/api/forum/question/create/",
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
         },
-        body: JSON.stringify({
+        body:JSON.stringify({
           title,
-          description,
-        }),
+          description
+        })
       }
     );
 
-    if (!res.ok) {
+    if(!res.ok){
       setMessage("❌ Failed to post question");
       return;
     }
 
-    setMessage("✅ Question posted successfully!");
+    setMessage("✅ Question posted");
 
     setTitle("");
     setDescription("");
 
     loadQuestions();
+
   };
 
-  // Load answers
-  const loadAnswers = async (questionId) => {
+  /* ---------------- UPDATE QUESTION ---------------- */
+
+  const updateQuestion = async(id)=>{
+
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/forum/question/update/${id}/`,
+      {
+        method:"PUT",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          title:editTitle,
+          description:editDescription
+        })
+      }
+    );
+
+    if(res.ok){
+      setEditingQuestionId(null);
+      loadQuestions();
+    }else{
+      alert("Failed to update question");
+    }
+
+  };
+
+  /* ---------------- DELETE QUESTION ---------------- */
+
+  const deleteQuestion = async(id)=>{
+
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/forum/question/delete/${id}/`,
+      {
+        method:"DELETE",
+        headers:{
+          Authorization:`Bearer ${token}`
+        }
+      }
+    );
+
+    if(res.ok){
+      loadQuestions();
+    }else{
+      alert("Failed to delete question");
+    }
+
+  };
+
+  /* ---------------- LOAD ANSWERS ---------------- */
+
+  const loadAnswers = async(questionId)=>{
 
     const res = await fetch(
       `http://127.0.0.1:8000/api/forum/answers/${questionId}/`
@@ -73,455 +163,434 @@ export default function Forum() {
 
     const data = await res.json();
 
-    setAnswers((prev) => ({
+    setAnswers(prev=>({
       ...prev,
-      [questionId]: data,
+      [questionId]:data
     }));
+
   };
 
-  // Post answer
-  const postAnswer = async (questionId) => {
+  /* ---------------- POST ANSWER ---------------- */
+
+  const postAnswer = async(questionId)=>{
 
     const content = answerText[questionId];
 
-    if (!content) return;
+    if(!content) return;
 
     const res = await fetch(
       `http://127.0.0.1:8000/api/forum/answer/${questionId}/`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
         },
-        body: JSON.stringify({
-          content,
-        }),
+        body:JSON.stringify({content})
       }
     );
 
-    if (!res.ok) {
+    if(!res.ok){
       alert("Failed to post answer");
       return;
     }
 
     setAnswerText({
       ...answerText,
-      [questionId]: "",
+      [questionId]:""
     });
 
     loadAnswers(questionId);
+
   };
-  const deleteQuestion = async (id) => {
-  const res = await fetch(
-    `http://127.0.0.1:8000/api/forum/question/delete/${id}/`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
 
-  if (res.ok) {
-    loadQuestions();
-  } else {
-    alert("Failed to delete question");
-  }
-};
-const updateQuestion = async (id) => {
-  const res = await fetch(
-    `http://127.0.0.1:8000/api/forum/question/update/${id}/`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: editTitle,
-        description: editDescription,
-      }),
-    }
-  );
+  /* ---------------- UPDATE ANSWER ---------------- */
 
-  if (res.ok) {
-    setEditingQuestionId(null);
-    loadQuestions();
-  } else {
-    alert("Failed to update question");
-  }
-};
-const deleteAnswer = async (id, questionId) => {
-  const res = await fetch(
-    `http://127.0.0.1:8000/api/forum/answer/delete/${id}/`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const updateAnswer = async(id,questionId)=>{
 
-  if (res.ok) {
-    loadAnswers(questionId);
-  } else {
-    alert("Failed to delete answer");
-  }
-};
-const updateAnswer = async (id, questionId) => {
-  const res = await fetch(
-    `http://127.0.0.1:8000/api/forum/answer/update/${id}/`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        content: editAnswerText,
-      }),
-    }
-  );
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/forum/answer/update/${id}/`,
+      {
+        method:"PUT",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          content:editAnswerText
+        })
+      }
+    );
 
-  if (res.ok) {
-    setEditingAnswerId(null);
-    loadAnswers(questionId);
-  } else {
-    alert("Failed to update answer");
-  }
-};
-  return (
+    if(res.ok){
+      setEditingAnswerId(null);
+      loadAnswers(questionId);
+    }
+
+  };
+
+  /* ---------------- DELETE ANSWER ---------------- */
+
+  const deleteAnswer = async(id,questionId)=>{
+
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/forum/answer/delete/${id}/`,
+      {
+        method:"DELETE",
+        headers:{
+          Authorization:`Bearer ${token}`
+        }
+      }
+    );
+
+    if(res.ok){
+      loadAnswers(questionId);
+    }
+
+  };
+
+  return(
     <div className="page">
 
-      {/* Navbar */}
+      <div className="card">
 
-      <div className="navbar">
-        <div className="logo">ChatAI Forum</div>
-      </div>
+        <h2>Discussion Forum</h2>
 
-      <div className="container">
+        {message && <p className="success">{message}</p>}
 
-        <div className="card">
+        <input
+          placeholder="Question Title"
+          value={title}
+          onChange={(e)=>setTitle(e.target.value)}
+        />
 
-          <div className="card-header">
-            Discussion Forum
-          </div>
+        <textarea
+          placeholder="Question Description"
+          value={description}
+          onChange={(e)=>setDescription(e.target.value)}
+        />
 
-          <div className="card-body">
+        <button className="primary-btn" onClick={postQuestion}>
+          Post Question
+        </button>
 
-            {message && <p className="success">{message}</p>}
+        <button
+          className="secondary-btn"
+          onClick={()=>setShowQuestions(!showQuestions)}
+        >
+          {showQuestions ? "Hide Questions" : "View Questions"}
+        </button>
 
-            {/* Question form */}
+        {showQuestions && questions.map(q => (
 
-            <input
-              placeholder="Question Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+          <div key={q.id} className="question">
 
-            <textarea
-              placeholder="Question Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <div className="question-header">
 
-            <button
-              className="purple-btn"
-              onClick={postQuestion}
-            >
-              Post Question
-            </button>
+              <div>
 
-            <button
-              className="secondary-btn"
-              onClick={() => setShowQuestions(!showQuestions)}
-            >
-              {showQuestions ? "Hide Questions" : "View Questions"}
-            </button>
+                {editingQuestionId === q.id ? (
 
-            {/* Questions list */}
-
-            {showQuestions &&
-              questions.map((q) => (
-
-                <div key={q.id} className="question">
-
-                  <h3>{q.title}</h3>
-
-                  <p>{q.description}</p>
-
-                  <small>Posted by {q.user}</small>
-
-                  <button
-                    className="view-btn"
-                    onClick={() => loadAnswers(q.id)}
-                  >
-                    View Answers
-                  </button>
-
-                  {answers[q.id] && (
-  <div className="answers">
-    <h4>Answers</h4>
-
-    {answers[q.id].map((a, i) => (
-      <div key={i} className="answer-card">
-
-        {editingAnswerId === a.id ? (
-          <>
-            <textarea
-              value={editAnswerText}
-              onChange={(e) => setEditAnswerText(e.target.value)}
-            />
-
-            <button
-              onClick={() => updateAnswer(a.id, q.id)}
-            >
-              Save
-            </button>
-
-            <button
-              onClick={() => setEditingAnswerId(null)}
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="answer-user">{a.user}</div>
-
-            <div className="answer-content">{a.content}</div>
-
-            <button
-              onClick={() => {
-                setEditingAnswerId(a.id);
-                setEditAnswerText(a.content);
-              }}
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() => deleteAnswer(a.id, q.id)}
-            >
-              Delete
-            </button>
-          </>
-        )}
-
-      </div>
-    ))}
-  </div>
-)}
-
-                  {/* Answer input */}
-
-                  <div className="answer-box">
-
-                    <textarea
-                      placeholder="Write your answer..."
-                      value={answerText[q.id] || ""}
-                      onChange={(e) =>
-                        setAnswerText({
-                          ...answerText,
-                          [q.id]: e.target.value,
-                        })
-                      }
+                  <>
+                    <input
+                      value={editTitle}
+                      onChange={(e)=>setEditTitle(e.target.value)}
                     />
 
-                    <button
-                      className="submit-answer"
-                      onClick={() => postAnswer(q.id)}
-                    >
-                      Submit Answer
+                    <textarea
+                      value={editDescription}
+                      onChange={(e)=>setEditDescription(e.target.value)}
+                    />
+
+                    <button onClick={()=>updateQuestion(q.id)} className="save-btn">
+                      Save
                     </button>
-                    <button onClick={() => {
-                          setEditingQuestionId(q.id);
-                          setEditTitle(q.title);
-                          setEditDescription(q.description);
-                        }}>
-                        Edit
-                        </button>
 
-                        <button onClick={() => deleteQuestion(q.id)}>
-                        Delete
-                        </button>
-                        {editingQuestionId === q.id ? (
-  <>
-    <input
-      value={editTitle}
-      onChange={(e) => setEditTitle(e.target.value)}
-    />
+                    <button onClick={()=>setEditingQuestionId(null)} className="cancel-btn">
+                      Cancel
+                    </button>
+                  </>
 
-    <textarea
-      value={editDescription}
-      onChange={(e) => setEditDescription(e.target.value)}
-    />
+                ) : (
 
-    <button onClick={() => updateQuestion(q.id)}>Save</button>
-    <button onClick={() => setEditingQuestionId(null)}>Cancel</button>
-  </>
-) : (
-  <>
-    <h3>{q.title}</h3>
-    <p>{q.description}</p>
-  </>
-)}
-                  </div>
+                  <>
+                    <h3>{q.title}</h3>
+                    <p>{q.description}</p>
+                    <small>Posted by {q.user}</small>
+                  </>
+
+                )}
+
+              </div>
+
+              {currentUser === q.user && (
+
+                <div className="actions">
+
+                  <button
+                    className="edit-btn"
+                    onClick={()=>{
+                      setEditingQuestionId(q.id);
+                      setEditTitle(q.title);
+                      setEditDescription(q.description);
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    className="delete-btn"
+                    onClick={()=>deleteQuestion(q.id)}
+                  >
+                    Delete
+                  </button>
 
                 </div>
 
-              ))}
+              )}
+
+            </div>
+
+            <button
+              className="view-btn"
+              onClick={()=>loadAnswers(q.id)}
+            >
+              View Answers
+            </button>
+
+            {answers[q.id] && (
+
+              <div className="answers">
+
+                {answers[q.id].map(a => (
+
+                  <div key={a.id} className="answer">
+
+                    <div className="answer-header">
+
+                      <span>{a.user}</span>
+
+                      {currentUser === a.user && (
+
+                        <div className="actions">
+
+                          <button
+                            className="edit-btn"
+                            onClick={()=>{
+                              setEditingAnswerId(a.id);
+                              setEditAnswerText(a.content);
+                            }}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="delete-btn"
+                            onClick={()=>deleteAnswer(a.id,q.id)}
+                          >
+                            Delete
+                          </button>
+
+                        </div>
+
+                      )}
+
+                    </div>
+
+                    {editingAnswerId === a.id ? (
+
+                      <>
+                        <textarea
+                          value={editAnswerText}
+                          onChange={(e)=>setEditAnswerText(e.target.value)}
+                        />
+
+                        <button onClick={()=>updateAnswer(a.id,q.id)} className="save-btn">
+                          Save
+                        </button>
+                      </>
+
+                    ) : (
+
+                      <p>{a.content}</p>
+
+                    )}
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+            <textarea
+              placeholder="Write your answer..."
+              value={answerText[q.id] || ""}
+              onChange={(e)=>setAnswerText({
+                ...answerText,
+                [q.id]:e.target.value
+              })}
+            />
+
+            <button
+              className="answer-btn"
+              onClick={()=>postAnswer(q.id)}
+            >
+              Submit Answer
+            </button>
 
           </div>
 
-        </div>
+        ))}
 
       </div>
 
-      <style jsx>{`
+<style jsx>{`
 
-      .page{
-        min-height:100vh;
-        background:#f3f4f6;
-      }
+.page{
+min-height:100vh;
+background:#020617;
+display:flex;
+justify-content:center;
+padding-top:120px;
+color:white;
+}
 
-      .navbar{
-        height:64px;
-        background:linear-gradient(90deg,#7c3aed,#6d28d9);
-        display:flex;
-        align-items:center;
-        padding:0 30px;
-        color:white;
-        font-size:20px;
-        font-weight:600;
-      }
+.card{
+width:900px;
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(18px);
+border-radius:14px;
+padding:40px;
+border:1px solid rgba(255,255,255,0.1);
+}
 
-      .container{
-        display:flex;
-        justify-content:center;
-        padding-top:60px;
-      }
+input,textarea{
+width:100%;
+padding:12px;
+margin-top:12px;
+border-radius:8px;
+border:1px solid rgba(255,255,255,0.15);
+background:rgba(255,255,255,0.05);
+color:white;
+}
 
-      .card{
-        width:75%;
-        max-width:900px;
-        background:white;
-        border-radius:12px;
-        box-shadow:0 10px 30px rgba(0,0,0,0.15);
-      }
+textarea{
+min-height:90px;
+}
 
-      .card-header{
-        background:linear-gradient(90deg,#7c3aed,#6d28d9);
-        color:white;
-        padding:16px;
-        font-size:20px;
-        font-weight:600;
-        border-radius:12px 12px 0 0;
-      }
+.primary-btn{
+background:linear-gradient(135deg,#7c3aed,#6d28d9);
+border:none;
+padding:12px;
+border-radius:8px;
+color:white;
+margin-top:12px;
+}
 
-      .card-body{
-        padding:25px;
-        display:flex;
-        flex-direction:column;
-        gap:12px;
-      }
+.secondary-btn{
+background:#1f2937;
+border:none;
+padding:10px;
+border-radius:8px;
+color:white;
+margin-top:10px;
+}
 
-      input, textarea{
-        padding:12px;
-        border-radius:8px;
-        border:1px solid #d1d5db;
-      }
+.question{
+margin-top:30px;
+padding:20px;
+background:rgba(255,255,255,0.04);
+border-radius:10px;
+}
 
-      textarea{
-        min-height:90px;
-      }
+.question-header{
+display:flex;
+justify-content:space-between;
+}
 
-      .purple-btn{
-        background:linear-gradient(90deg,#7c3aed,#6d28d9);
-        border:none;
-        padding:12px;
-        color:white;
-        border-radius:8px;
-        font-weight:600;
-        cursor:pointer;
-      }
+.actions{
+display:flex;
+gap:6px;
+}
 
-      .secondary-btn{
-        background:#e5e7eb;
-        border:none;
-        padding:10px;
-        border-radius:8px;
-        cursor:pointer;
-      }
+.edit-btn{
+background:#6366f1;
+border:none;
+padding:6px 10px;
+border-radius:6px;
+color:white;
+}
 
-      .question{
-        margin-top:10px;
-        padding:16px;
-        border-radius:10px;
-        background:#f9fafb;
-        border:1px solid #e5e7eb;
-      }
+.delete-btn{
+background:#ef4444;
+border:none;
+padding:6px 10px;
+border-radius:6px;
+color:white;
+}
 
-      .view-btn{
-        margin-top:10px;
-        background:#e0e7ff;
-        border:none;
-        padding:8px 12px;
-        border-radius:6px;
-        cursor:pointer;
-      }
+.view-btn{
+background:#4f46e5;
+border:none;
+padding:8px 14px;
+border-radius:6px;
+margin-top:10px;
+color:white;
+}
 
-      .answers{
-        margin-top:10px;
-        padding:10px;
-        background:#f3f4f6;
-        border-radius:8px;
-      }
+.answers{
+margin-top:15px;
+}
 
-      .answer-card{
-        background:white;
-        padding:10px;
-        border-radius:6px;
-        border:1px solid #e5e7eb;
-        margin-top:6px;
-      }
+.answer{
+background:rgba(255,255,255,0.06);
+padding:12px;
+border-radius:8px;
+margin-bottom:10px;
+}
 
-      .answer-user{
-        font-weight:600;
-        color:#6366f1;
-        font-size:13px;
-      }
+.answer-header{
+display:flex;
+justify-content:space-between;
+margin-bottom:6px;
+}
 
-      .answer-content{
-        font-size:14px;
-        margin-top:3px;
-      }
+.answer-btn{
+margin-top:10px;
+background:linear-gradient(135deg,#6366f1,#4f46e5);
+border:none;
+padding:10px;
+border-radius:8px;
+color:white;
+}
 
-      .answer-box{
-        margin-top:10px;
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-      }
+.save-btn{
+background:#22c55e;
+border:none;
+padding:6px 12px;
+border-radius:6px;
+color:white;
+margin-top:6px;
+}
 
-      .submit-answer{
-        background:linear-gradient(90deg,#6366f1,#4f46e5);
-        border:none;
-        padding:10px 16px;
-        color:white;
-        border-radius:8px;
-        font-weight:600;
-        cursor:pointer;
-        width:160px;
-      }
+.cancel-btn{
+background:#6b7280;
+border:none;
+padding:6px 12px;
+border-radius:6px;
+color:white;
+margin-left:6px;
+}
 
-      .success{
-        color:#16a34a;
-      }
+.success{
+color:#22c55e;
+}
 
-      `}</style>
+`}</style>
 
     </div>
   );
+
 }

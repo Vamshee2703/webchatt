@@ -1,4 +1,5 @@
 import "../styles/globals.css";
+import "../styles/auth.css";
 import Navbar from "../components/Navbar";
 
 export default function App({ Component, pageProps }) {

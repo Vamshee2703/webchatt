@@ -12,7 +12,7 @@ from .serializers import SignupSerializer
 from .services.llm import ask_llm
 from .utils import index_website_with_crawler
 from django.shortcuts import get_object_or_404
-
+from django.views.decorators.csrf import csrf_exempt
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
@@ -378,4 +378,16 @@ def delete_answer(request, answer_id):
 
     return Response({
         "message": "Answer deleted successfully"
+    })
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+
+    user = request.user
+
+    return Response({
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "is_staff": user.is_staff
     })

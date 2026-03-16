@@ -5,77 +5,51 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
+import psycopg2
 import os
 import base64
 import time
 
 load_dotenv()
 
-# ---------------- PAGE CONFIG ----------------
+# ---------------- GROQ CLIENT ----------------
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# ---------------- POSTGRES CONNECTION ----------------
+conn = psycopg2.connect(
+    host="localhost",
+    database="chatai_db",
+    user="postgres",
+    password="admin",
+    port="5432"
+)
+
+cursor = conn.cursor()
+
+# ---------------- STREAMLIT PAGE ----------------
 st.set_page_config(
     page_title="PDF Chatbot",
     page_icon="📄",
     layout="wide"
 )
 
-# ---------------- CUSTOM STYLING ----------------
-st.markdown("""
-<style>
+st.title("📄 Chat With Your PDF")
+st.caption("Upload a PDF and ask questions.")
 
-body {
-    background: linear-gradient(-45deg,#020617,#1e3a8a,#6d28d9,#0ea5e9);
-    background-size: 400% 400%;
-    animation: gradientMove 14s ease infinite;
-}
+# ---------------- SESSION STATE ----------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-@keyframes gradientMove {
-  0% { background-position:0% 50% }
-  50% { background-position:100% 50% }
-  100% { background-position:0% 50% }
-}
+if "pdf_id" not in st.session_state:
+    st.session_state.pdf_id = None
 
-.block-container {
-    max-width: 900px;
-    margin: auto;
-}
-
-.user-msg {
-    background: linear-gradient(135deg,#22c55e,#4ade80);
-    color:#052e16;
-    padding:12px;
-    border-radius:14px;
-    max-width:70%;
-    margin-left:auto;
-    margin-top:10px;
-    font-weight:500;
-}
-
-.bot-msg {
-    background: rgba(255,255,255,0.9);
-    color:#020617;
-    padding:12px;
-    border-radius:14px;
-    max-width:70%;
-    margin-right:auto;
-    margin-top:10px;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- SIDEBAR ----------------
-with st.sidebar:
-    st.title("PDF Chatbot")
-
-# ---------------- GROQ CLIENT ----------------
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
+# ---------------- LLM FUNCTION ----------------
 def query_llm(prompt):
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
-            {"role": "system", "content": "Answer ONLY using the provided context."},
+            {"role": "system", "content": "Answer only using the context."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.1,
@@ -84,27 +58,27 @@ def query_llm(prompt):
 
     return response.choices[0].message.content
 
-
 # ---------------- PDF PROCESSING ----------------
 def process_pdfs(pdfs):
 
-    all_text = ""
+    text = ""
 
     for pdf in pdfs:
-        pdf_reader = PdfReader(pdf)
+        pdf.seek(0)
+        reader = PdfReader(pdf)
 
-        for page in pdf_reader.pages:
+        for page in reader.pages:
             extracted = page.extract_text()
 
             if extracted:
-                all_text += extracted
+                text += extracted
 
-    text_splitter = RecursiveCharacterTextSplitter(
+    splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200
     )
 
-    chunks = text_splitter.split_text(all_text)
+    chunks = splitter.split_text(text)
 
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -114,83 +88,86 @@ def process_pdfs(pdfs):
 
     return vectorstore
 
+# ---------------- FILE UPLOAD ----------------
+pdfs = st.file_uploader(
+    "Upload PDF",
+    type="pdf",
+    accept_multiple_files=True
+)
 
-# ---------------- MAIN APP ----------------
-def main():
+if pdfs:
 
-    st.title("📄 Chat With Your PDF")
-    st.caption("Ask questions and get answers directly from your documents.")
+    # Save PDF metadata to PostgreSQL
+    if st.session_state.pdf_id is None:
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+        filename = pdfs[0].name
 
-    pdfs = st.file_uploader(
-        "Upload your PDFs",
-        type="pdf",
-        accept_multiple_files=True
-    )
+        cursor.execute(
+            "INSERT INTO pdf_documents (filename) VALUES (%s) RETURNING id",
+            (filename,)
+        )
 
-    if pdfs:
+        pdf_id = cursor.fetchone()[0]
+        conn.commit()
 
-        # Sidebar preview
-        st.sidebar.subheader("📄 PDF Preview")
+        st.session_state.pdf_id = pdf_id
 
-        for pdf in pdfs:
+        st.success(f"PDF stored with ID: {pdf_id}")
 
-            base64_pdf = base64.b64encode(pdf.read()).decode('utf-8')
+    # Sidebar preview
+    st.sidebar.subheader("📄 PDF Preview")
 
-            pdf_display = f"""
-            <iframe src="data:application/pdf;base64,{base64_pdf}"
-            width="100%" height="400"></iframe>
-            """
+    for pdf in pdfs:
 
-            st.sidebar.markdown(f"### {pdf.name}", unsafe_allow_html=True)
-            st.sidebar.markdown(pdf_display, unsafe_allow_html=True)
+        pdf.seek(0)
+        base64_pdf = base64.b64encode(pdf.read()).decode("utf-8")
 
-        vectorstore = process_pdfs(pdfs)
+        pdf_display = f"""
+        <iframe src="data:application/pdf;base64,{base64_pdf}"
+        width="100%" height="400"></iframe>
+        """
 
-        # Chat history
-        for message in st.session_state.messages:
+        st.sidebar.markdown(f"### {pdf.name}", unsafe_allow_html=True)
+        st.sidebar.markdown(pdf_display, unsafe_allow_html=True)
 
-            if message["role"] == "user":
-                st.markdown(
-                    f"<div class='user-msg'>{message['content']}</div>",
-                    unsafe_allow_html=True
-                )
+    # Build vector store
+    if "vectorstore" not in st.session_state:
+        st.session_state.vectorstore = process_pdfs(pdfs)
 
-            else:
-                st.markdown(
-                    f"<div class='bot-msg'>{message['content']}</div>",
-                    unsafe_allow_html=True
-                )
+    vectorstore = st.session_state.vectorstore
 
-        query = st.chat_input("Ask a question about your PDFs")
+    # ---------------- CHAT HISTORY ----------------
+    for message in st.session_state.messages:
 
-        if query:
+        if message["role"] == "user":
+            st.markdown(f"**You:** {message['content']}")
 
-            st.session_state.messages.append(
-                {"role": "user", "content": query}
-            )
+        else:
+            st.markdown(f"**Bot:** {message['content']}")
 
-            st.markdown(
-                f"<div class='user-msg'>{query}</div>",
-                unsafe_allow_html=True
-            )
+    # ---------------- CHAT INPUT ----------------
+    query = st.chat_input("Ask something about the PDF")
 
-            docs = vectorstore.similarity_search(query, k=15)
+    if query:
 
-            context = "\n\n".join(doc.page_content for doc in docs)
+        st.session_state.messages.append({
+            "role": "user",
+            "content": query
+        })
 
-            prompt = f"""
-You are an AI assistant answering questions using the provided document context.
+        # Save user message to DB
+        cursor.execute(
+            "INSERT INTO pdf_chat (pdf_id, role, message) VALUES (%s,%s,%s)",
+            (st.session_state.pdf_id, "user", query)
+        )
 
-Rules:
-1. Use the context as the primary source.
-2. Do not assume information not present in the context.
-3. If the context contains partial information, use it to generate a reasonable answer.
-4. If the context truly has no relevant information, say:
-"The answer is not available in the document."
+        conn.commit()
 
+        docs = vectorstore.similarity_search(query, k=5)
+
+        context = "\n\n".join(doc.page_content for doc in docs)
+
+        prompt = f"""
 Context:
 {context}
 
@@ -200,25 +177,26 @@ Question:
 Answer:
 """
 
-            with st.spinner("Thinking... ⚡"):
-                answer = query_llm(prompt)
+        with st.spinner("Thinking..."):
+            answer = query_llm(prompt)
 
-            placeholder = st.empty()
-            typed = ""
+        placeholder = st.empty()
+        typed = ""
 
-            for char in answer:
-                typed += char
-                placeholder.markdown(
-                    f"<div class='bot-msg'>{typed}</div>",
-                    unsafe_allow_html=True
-                )
-                time.sleep(0.01)
+        for char in answer:
+            typed += char
+            placeholder.markdown(f"**Bot:** {typed}")
+            time.sleep(0.01)
 
-            st.session_state.messages.append(
-                {"role": "assistant", "content": answer}
-            )
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer
+        })
 
+        # Save bot message
+        cursor.execute(
+            "INSERT INTO pdf_chat (pdf_id, role, message) VALUES (%s,%s,%s)",
+            (st.session_state.pdf_id, "bot", answer)
+        )
 
-# ---------------- RUN ----------------
-if __name__ == "__main__":
-    main()
+        conn.commit()

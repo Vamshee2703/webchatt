@@ -16,9 +16,6 @@ export default function Dashboard() {
       <div style={styles.container}>
         <div style={styles.card}>
           <h2>Ask Anything From Websites or PDFs</h2>
-
-          <p>Select what you want to chat with.</p>
-
           <div style={styles.buttonRow}>
             <button
               style={styles.button}

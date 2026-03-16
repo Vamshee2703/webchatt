@@ -145,7 +145,7 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True  # dev only
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = [
+CORS_ALLOW_HEADERS = [ 
     "authorization",
     "content-type",
 ]

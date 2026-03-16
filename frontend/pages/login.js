@@ -2,54 +2,95 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Login() {
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
   const router = useRouter();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+
+    e.preventDefault(); // prevents page reload
     setError("");
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/login/`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+    try {
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/login/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError("Invalid email or password");
+        return;
       }
-    );
 
-    const data = await res.json();
-    if (!res.ok) {
-      setError("Invalid email or password");
-      return;
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+
+      router.push("/dashboard");
+
+    } catch (err) {
+      setError("Server error. Please try again.");
     }
-
-    localStorage.setItem("access", data.access);
-    localStorage.setItem("refresh", data.refresh);
-    router.push("/dashboard");
   };
 
   return (
-    <div className="auth-bg">
+    <div className="page">
+
+      <div className="blob"></div>
+
       <div className="auth-card">
-        <div className="auth-form">
+
+        {/* FORM */}
+        <form className="auth-form" onSubmit={handleLogin}>
+
           <h2>Welcome Back 👋</h2>
-          <p className="auth-subtitle"><center>Login to ContextIQ</center></p>
 
-          <input placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
+          <p className="auth-subtitle">
+            Login to ContextIQ
+          </p>
 
-          <button onClick={handleLogin}>Sign In</button>
+          <input
+            placeholder="Email"
+            value={email}
+            required
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            required
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {/* submit button */}
+          <button type="submit">
+            Sign In
+          </button>
 
           {error && <p className="auth-error">{error}</p>}
 
           <div className="auth-link">
             Don’t have an account?{" "}
-            <span onClick={() => router.push("/signup")}>Sign up</span>
+            <span onClick={() => router.push("/signup")}>
+              Sign up
+            </span>
           </div>
-        </div>
+
+        </form>
+
       </div>
+
     </div>
   );
 }

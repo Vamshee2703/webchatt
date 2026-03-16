@@ -6,8 +6,8 @@
 
 body {
   margin: 0;
-  background: #f6f7fb;
-  color: #333;
+  background: #020617;
+  color: white;
   overflow-x: hidden;
 }
 
@@ -15,41 +15,30 @@ body {
 .auth-bg {
   min-height: 100vh;
   width: 100vw;
-  background: #f6f7fb;
 
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 100px;
+
+  background: #020617;
 }
 
-/* ===== MAIN CARD (WHITE LIKE IMAGE) ===== */
+/* ===== GLASS CARD (LOGIN + SIGNUP) ===== */
 .auth-card {
-  width: 460px;
-  border-radius: 10px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  width: 420px;
 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  position: relative;
-  overflow: hidden;
-}
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(18px);
 
-/* ===== TOP PURPLE HEADER ===== */
-.auth-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 90px;
+  border: 1px solid rgba(255,255,255,0.12);
 
-  background: linear-gradient(135deg,#7c3aed,#9333ea);
+  border-radius: 14px;
+
+  padding: 40px;
 }
 
 /* ===== FORM ===== */
 .auth-form {
-  padding: 120px 40px 40px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -59,46 +48,42 @@ body {
 .auth-form h2 {
   font-size: 26px;
   font-weight: 600;
-  margin-bottom: 6px;
-  color: #333;
 }
 
 .auth-subtitle {
-  color: #6b7280;
+  color: #9ca3af;
   font-size: 14px;
-  margin-bottom: 14px;
 }
 
 /* ===== INPUTS ===== */
 .auth-form input {
   padding: 13px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #333;
+  border-radius: 8px;
+
+  border: 1px solid rgba(255,255,255,0.15);
+
+  background: rgba(255,255,255,0.05);
+  color: white;
+
   outline: none;
-  transition: all 0.2s ease;
 }
 
 .auth-form input::placeholder {
   color: #9ca3af;
 }
 
-.auth-form input:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 2px rgba(124,58,237,0.15);
-}
-
 /* ===== BUTTON ===== */
 .auth-form button {
   padding: 13px;
-  border-radius: 6px;
+  border-radius: 20px;
   border: none;
+
   font-weight: 600;
   cursor: pointer;
   color: white;
 
   background: linear-gradient(135deg,#7c3aed,#6d28d9);
+
   transition: all 0.25s ease;
 }
 
@@ -110,11 +95,11 @@ body {
 /* ===== LINKS ===== */
 .auth-link {
   font-size: 14px;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .auth-link span {
-  color: #7c3aed;
+  color: #a78bfa;
   font-weight: 500;
   cursor: pointer;
 }
@@ -125,55 +110,26 @@ body {
 }
 
 .auth-success {
-  color: #16a34a;
+  color: #22c55e;
 }
 
-/* ===== NAVBAR ===== */
-.auth-navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 70px;
-  padding: 0 60px;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  z-index: 1000;
+/* ===== FORCE NAV LINKS WHITE ===== */
+a{
+  text-decoration: none;
 }
 
-/* LEFT NAV */
-.nav-left {
-  font-size: 20px;
-  font-weight: 700;
-  color: #7c3aed;
-  cursor: pointer;
-}
-
-/* RIGHT NAV */
-.nav-right {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.nav-right span {
-  cursor: pointer;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.nav-right button {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
+a:link{
   color: white;
-  font-weight: 500;
+}
 
-  background: linear-gradient(135deg,#7c3aed,#6d28d9);
+a:visited{
+  color: white;
+}
+
+a:hover{
+  color: white;
+}
+
+a:active{
+  color: white;
 }

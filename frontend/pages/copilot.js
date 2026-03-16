@@ -227,17 +227,17 @@ useEffect(() => {
               placeholder="Ask a question…"
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             />
-            <button onClick={sendMessage}>Send</button>
+            <button type ="submit" onClick={sendMessage}>Send</button>
           </div>
         </div>
       </div>
 
       <style jsx>{`
         .page {
-          height: calc(100vh - 64px);
-          margin-top: 64px;
-          background: #020617;
-        }
+  height: 100vh;
+  padding-top: 100px; /* space for floating navbar */
+  background: #020617;
+}
 
         .layout {
           display: flex;

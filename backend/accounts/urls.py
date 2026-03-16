@@ -15,6 +15,7 @@ from .views import (
     delete_question,
     update_answer,
     delete_answer,
+    user_profile,
 )
 
 urlpatterns = [
@@ -23,6 +24,7 @@ urlpatterns = [
     path("copilot/", copilot),
     path("copilot/history/", chat_history),
     path("crawl/", crawl_website),
+    path("profile/", user_profile),
 
     # Forum APIs
     path("forum/questions/", list_questions),
