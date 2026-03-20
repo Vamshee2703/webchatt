@@ -111,4 +111,4 @@ def index_website_with_crawler(start_url):
             if link not in visited:
                 to_visit.append(link)
 
-    print("✅ Crawling and indexing complete")
+    print("✅ Crawling and indexing completed")

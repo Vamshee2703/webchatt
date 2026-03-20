@@ -83,7 +83,7 @@ WSGI_APPLICATION = 'chatai.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'chatai_db',
+        'NAME': 'chatbott',
         'USER': 'postgres',          # your pg username
         'PASSWORD': 'admin', # your pg password
         'HOST': 'localhost',

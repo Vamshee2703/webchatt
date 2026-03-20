@@ -6,28 +6,23 @@ from groq import Groq
 import os
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from .models import ChatMessage, WebsiteChunk, Question, Answer
+from .models import ChatMessage, WebsiteChunk, Question, Answer, ChatSession
 from .permissions import IsEmployee
 from .serializers import SignupSerializer
 from .services.llm import ask_llm
 from .utils import index_website_with_crawler
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# Embedding model
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 # -----------------------------
-# Crawl Website API
+# Crawl Website
 # -----------------------------
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def crawl_website(request):
-
     url = request.data.get("url")
 
     if not url:
@@ -35,56 +30,60 @@ def crawl_website(request):
 
     try:
         index_website_with_crawler(url)
-
-        return Response({
-            "message": "Website crawled and indexed successfully"
-        })
-
+        return Response({"message": "Website crawled successfully"})
     except Exception as e:
-        return Response({
-            "error": str(e)
-        }, status=500)
+        return Response({"error": str(e)}, status=500)
 
 
 # -----------------------------
-# Copilot Chat API
+# 🔥 Copilot Chat (UPDATED)
 # -----------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def copilot(request):
 
     question = request.data.get("question", "").strip()
+    session_id = request.data.get("session_id")
+    url = request.data.get("url")
 
     if not question:
         return Response({"error": "Question is required"}, status=400)
 
-    # Save user message
-    ChatMessage.objects.create(
-        user=request.user,
-        role="user",
-        content=question,
+    # 🔥 GET OR CREATE SESSION
+    session, created = ChatSession.objects.get_or_create(
+        session_id=session_id,
+        defaults={
+            "user": request.user,
+            "url": url,
+            "title": question[:40]
+        }
     )
 
-    # 🔹 Get last 6 chat messages (history)
+    # 🔥 SAVE USER MESSAGE
+    ChatMessage.objects.create(
+        user=request.user,
+        session=session,
+        role="user",
+        content=question
+    )
+
+    # 🔥 GET HISTORY (PER SESSION)
     history_messages = ChatMessage.objects.filter(
-        user=request.user
+        session=session
     ).order_by("-created_at")[:6]
 
     history_text = ""
-
     for msg in reversed(history_messages):
         history_text += f"{msg.role}: {msg.content}\n"
 
-    # 🔹 Convert question to embedding
+    # 🔥 EMBEDDING
     question_vector = embedding_model.encode(question)
 
-    # 🔹 Get all website chunks
-    chunks = WebsiteChunk.objects.all()
+    chunks = WebsiteChunk.objects.filter(url__icontains=url)
 
     scores = []
 
     for chunk in chunks:
-
         chunk_vector = np.array(chunk.embedding)
 
         similarity = np.dot(question_vector, chunk_vector) / (
@@ -93,15 +92,11 @@ def copilot(request):
 
         scores.append((similarity, chunk.content))
 
-    # 🔹 Sort by similarity
     scores.sort(reverse=True)
 
-    # 🔹 Take top 5 chunks
     top_chunks = [content for _, content in scores[:5]]
-
     context = "\n".join(top_chunks)
 
-    # 🔹 Combine history + website context
     full_context = f"""
 Conversation History:
 {history_text}
@@ -110,59 +105,57 @@ Website Content:
 {context}
 """
 
-    # 🔹 Ask LLM
+    # 🔥 ASK LLM
     answer = ask_llm(question, full_context)
 
-    # Save bot response
+    # 🔥 SAVE BOT RESPONSE
     ChatMessage.objects.create(
         user=request.user,
+        session=session,
         role="bot",
-        content=answer,
+        content=answer
     )
 
     return Response({"answer": answer})
-# -----------------------------
-# Signup API
-# -----------------------------
-@api_view(["POST"])
-def signup(request):
-
-    serializer = SignupSerializer(data=request.data)
-
-    if serializer.is_valid():
-        serializer.save()
-        return Response(
-            {"message": "User created successfully"},
-            status=201
-        )
-
-    return Response(serializer.errors, status=400)
 
 
 # -----------------------------
-# Employee Profile API
+# 🔥 GET ALL SESSIONS
 # -----------------------------
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsEmployee])
-def employee_me(request):
+@permission_classes([IsAuthenticated])
+def list_sessions(request):
 
-    return Response({
-        "id": request.user.id,
-        "email": request.user.email,
-        "username": request.user.username,
-        "is_staff": request.user.is_staff,
-    })
+    sessions = ChatSession.objects.filter(
+        user=request.user
+    ).order_by("-created_at")
+
+    return Response([
+        {
+            "session_id": s.session_id,
+            "title": s.title
+        }
+        for s in sessions
+    ])
 
 
 # -----------------------------
-# Chat History API
+# 🔥 CHAT HISTORY PER SESSION
 # -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def chat_history(request):
 
-    chats = ChatMessage.objects.filter(
+    session_id = request.GET.get("session_id")
+
+    session = get_object_or_404(
+        ChatSession,
+        session_id=session_id,
         user=request.user
+    )
+
+    chats = ChatMessage.objects.filter(
+        session=session
     ).order_by("created_at")
 
     return Response([
@@ -174,6 +167,67 @@ def chat_history(request):
         for c in chats
     ])
 
+
+# -----------------------------
+# 🔥 DELETE SESSION
+# -----------------------------
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_session(request, session_id):
+
+    session = get_object_or_404(
+        ChatSession,
+        session_id=session_id,
+        user=request.user
+    )
+
+    session.delete()
+
+    return Response({"message": "Session deleted"})
+
+
+# -----------------------------
+# Signup
+# -----------------------------
+@api_view(["POST"])
+def signup(request):
+    serializer = SignupSerializer(data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "User created successfully"}, status=201)
+
+    return Response(serializer.errors, status=400)
+
+
+# -----------------------------
+# Employee Profile
+# -----------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsEmployee])
+def employee_me(request):
+    return Response({
+        "id": request.user.id,
+        "email": request.user.email,
+        "username": request.user.username,
+        "is_staff": request.user.is_staff,
+    })
+
+
+# -----------------------------
+# User Profile
+# -----------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    user = request.user
+
+    return Response({
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "is_staff": user.is_staff
+    })
 # -----------------------------
 # Create Question
 # -----------------------------
@@ -379,15 +433,37 @@ def delete_answer(request, answer_id):
     return Response({
         "message": "Answer deleted successfully"
     })
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def user_profile(request):
+@api_view(["POST"])
+def copilot_extension(request):
 
-    user = request.user
+    question = request.data.get("question", "").strip()
 
-    return Response({
-        "id": user.id,
-        "email": user.email,
-        "username": user.username,
-        "is_staff": user.is_staff
-    })
+    if not question:
+        return Response({"error": "Question required"}, status=400)
+
+    # ❗ No authentication here
+
+    # embeddings
+    question_vector = embedding_model.encode(question)
+
+    chunks = WebsiteChunk.objects.all()
+
+    scores = []
+
+    for chunk in chunks:
+        chunk_vector = np.array(chunk.embedding)
+
+        similarity = np.dot(question_vector, chunk_vector) / (
+            np.linalg.norm(question_vector) * np.linalg.norm(chunk_vector)
+        )
+
+        scores.append((similarity, chunk.content))
+
+    scores.sort(reverse=True)
+    top_chunks = [content for _, content in scores[:5]]
+
+    context = "\n".join(top_chunks)
+
+    answer = ask_llm(question, context)
+
+    return Response({"answer": answer})

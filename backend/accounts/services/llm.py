@@ -6,13 +6,13 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def ask_llm(question, context):
 
     prompt = f"""
-You are a friendly AI assistant for a website chatbot.
+You are a website AI assistant.
 
 You will receive:
-1. Conversation history
-2. Website content
+- Website content
+- A user question
 
-Your task is to answer the user's question.
+Your job is to answer the question ONLY using the website content.
 
 ---------------------------
 CONTEXT
@@ -20,7 +20,7 @@ CONTEXT
 {context}
 
 ---------------------------
-USER QUESTION
+QUESTION
 ---------------------------
 {question}
 
@@ -28,31 +28,17 @@ USER QUESTION
 INSTRUCTIONS
 ---------------------------
 
-1. If the user greets you (hi, hello, hey, good morning, etc), respond with a friendly greeting.
-   Example:
-   "Hello! How can I help you with this website?"
-
-2. If the user asks general conversation questions (like "who are you"),
-   respond politely as a website assistant.
-
-3. If the question is about the website, answer using ONLY the provided website content.
-
-4. Do NOT invent information that is not present in the website content.
-
-5. If the answer is not available in the website content, respond exactly with:
-"This information is not available on the website."
-
-6. Do NOT say things like:
-   - "Based on the context"
-   - "Based on website content"
-
-7. Give clear and concise answers.
+1. Answer ONLY if the information exists in the context.
+2. Do NOT add greetings like "Hello" or "Hi".
+3. Do NOT repeat the question.
+4. Give clear, direct answers.
+5. If the answer is not found in the context, respond EXACTLY:
+   "This information is not available on the website."
 
 ---------------------------
-FINAL ANSWER
+ANSWER
 ---------------------------
 """
-
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[

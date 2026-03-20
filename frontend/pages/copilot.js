@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
+
 export default function Copilot() {
   const router = useRouter();
   const { url } = router.query;
+
+  const API = process.env.NEXT_PUBLIC_API_URL;
+
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [iframeAllowed, setIframeAllowed] = useState(true);
   const [input, setInput] = useState("");
@@ -11,123 +15,144 @@ export default function Copilot() {
   const [loading, setLoading] = useState(false);
   const [showWebsite, setShowWebsite] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+
+  const [sessionId, setSessionId] = useState("");
+  const [sessions, setSessions] = useState([]);
+
   const messagesEndRef = useRef(null);
+
   /* Load URL */
   useEffect(() => {
     if (!url) return;
-    const decoded = decodeURIComponent(url);
-    setWebsiteUrl(decoded);
+    setWebsiteUrl(decodeURIComponent(url));
   }, [url]);
-/* Check if iframe loads */
-useEffect(() => {
-  if (!websiteUrl) return;
-  let loaded = false;
-  const iframe = document.createElement("iframe");
-  iframe.src = websiteUrl;
-  iframe.style.display = "none";
 
-  iframe.onload = () => {
-    loaded = true;
-    setIframeAllowed(true);
-    document.body.removeChild(iframe);
-  };
+  /* 🔥 LOAD SESSIONS (FIXED) */
+  const fetchSessions = async () => {
+    try {
+      const res = await fetch(`${API}/api/sessions/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+      });
 
-  iframe.onerror = () => {
-    loaded = true;
-    setIframeAllowed(false);
-    document.body.removeChild(iframe);
-  };
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
 
-  document.body.appendChild(iframe);
+      const data = await res.json();
+      console.log("Sessions API:", data);
 
-  /* timeout fallback */
-  setTimeout(() => {
-    if (!loaded) {
-      setIframeAllowed(true);
-      document.body.removeChild(iframe);
+      if (Array.isArray(data)) {
+        setSessions(data);
+
+        // auto load first session
+        if (data.length > 0 && !sessionId) {
+          setSessionId(data[0].session_id);
+          loadChat(data[0].session_id);
+        }
+      } else {
+        setSessions([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setSessions([]);
     }
-  }, 3000);
+  };
 
-}, [websiteUrl]);
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  /* 🔥 LOAD CHAT */
+  const loadChat = async (sid) => {
+    try {
+      setSessionId(sid);
+
+      const res = await fetch(
+        `${API}/api/copilot/history/?session_id=${sid}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access")}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setMessages(data);
+      } else {
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  /* 🔥 NEW CHAT */
+  const newChat = () => {
+    const newSession = `${Date.now()}`;
+    setSessionId(newSession);
+    setMessages([]);
+  };
+
+  /* 🔥 DELETE CHAT */
+  const deleteChat = async (sid) => {
+    try {
+      await fetch(`${API}/api/sessions/delete/${sid}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+      });
+
+      fetchSessions();
+
+      if (sid === sessionId) {
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* Auto scroll */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  /* Load history */
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/copilot/history/`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access")}`,
-            },
-          }
-        );
-
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
-
-        const data = await res.json();
-
-        if (data.length === 0) {
-          setMessages([
-            {
-              role: "bot",
-              text: "👋 Hi! Ask me anything about this website.",
-              time: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            },
-          ]);
-        } else {
-          setMessages(data);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    loadHistory();
-  }, [router]);
-
+  /* 🔥 SEND MESSAGE (FIXED) */
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const timestamp = new Date().toLocaleTimeString([], {
+    const time = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
 
     setMessages((prev) => [
       ...prev,
-      { role: "user", text: input, time: timestamp },
+      { role: "user", text: input, time },
     ]);
 
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/copilot/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("access")}`,
-          },
-          body: JSON.stringify({
-            question: input,
-            url: websiteUrl,
-          }),
-        }
-      );
+      const res = await fetch(`${API}/api/copilot/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+        body: JSON.stringify({
+          question: input,
+          url: websiteUrl,
+          session_id: sessionId,
+        }),
+      });
 
       const data = await res.json();
 
@@ -135,23 +160,21 @@ useEffect(() => {
         ...prev,
         {
           role: "bot",
-          text:
-            data.answer ||
-            "This information is not available on the website.",
+          text: data.answer || "⚠️ No answer found",
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
         },
       ]);
-    } catch {
+
+      // 🔥 reload sidebar
+      fetchSessions();
+
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "bot",
-          text: "⚠️ Error talking to Copilot.",
-          time: timestamp,
-        },
+        { role: "bot", text: "⚠️ Server error", time },
       ]);
     } finally {
       setLoading(false);
@@ -159,207 +182,256 @@ useEffect(() => {
   };
 
   return (
-    <div className="page">
-      <div className="layout">
+    <div className="appWrapper">
 
-        {/* WEBSITE */}
-        {showWebsite && !fullscreen && (
-          <div className="website">
-            {iframeAllowed ? (
-              <iframe
-                src={websiteUrl}
-                title="Website"
-                className="iframe"
-              />
-            ) : (
-              <div className="blocked">
-                ❌ This website blocks iframe embedding.
-                <br />
-                You cannot chat with this site.
-              </div>
-            )}
-          </div>
-        )}
+      {/* SIDEBAR */}
+      <div className="sidebar">
+        <button className="newChatBtn" onClick={newChat}>
+          + New Chat
+        </button>
 
-        {/* COPILOT */}
-        <div className={`copilot ${fullscreen ? "fullscreen" : ""}`}>
-          <div className="header">
-            <div>
-              <h3>Web Copilot</h3>
-              <span className="online">● Online</span>
-            </div>
+        <div className="history">
+          {sessions.length === 0 && (
+            <div style={{ color: "#aaa" }}>No chats yet</div>
+          )}
 
-            <div className="actions">
-              <button onClick={() => setShowWebsite(!showWebsite)}>
-                {showWebsite ? "Hide Site" : "Show Site"}
-              </button>
-              <button onClick={() => setFullscreen(!fullscreen)}>
-                {fullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              </button>
-            </div>
-          </div>
-
-          <div className="messages">
-            {messages.map((m, i) => (
+          {sessions.map((s) => (
+            <div key={s.session_id} className="historyRow">
+              
               <div
-                key={i}
-                className={m.role === "user" ? "userMsg" : "botMsg"}
+                className={`historyItem ${
+                  s.session_id === sessionId ? "active" : ""
+                }`}
+                onClick={() => loadChat(s.session_id)}
               >
-                <div>{m.text}</div>
-                <div className="time">{m.time}</div>
+                {s.title}
               </div>
-            ))}
 
-            {loading && (
-              <div className="botMsg">
-                🤖 Thinking…
-                <div className="time">now</div>
-              </div>
-            )}
+              <button
+                className="deleteBtn"
+                onClick={() => deleteChat(s.session_id)}
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
 
-            <div ref={messagesEndRef} />
-          </div>
+      {/* MAIN */}
+      <div className="main">
+        <div className="layout">
 
-          <div className="inputArea">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question…"
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            />
-            <button type ="submit" onClick={sendMessage}>Send</button>
+          {showWebsite && !fullscreen && (
+            <div className="website">
+              <iframe src={websiteUrl} className="iframe" />
+            </div>
+          )}
+
+          <div className="copilot">
+            <div className="messages">
+              {messages.map((m, i) => (
+                <div key={i} className={m.role === "user" ? "userMsg" : "botMsg"}>
+                  {m.text}
+                </div>
+              ))}
+              {loading && <div className="botMsg">🤖 Thinking...</div>}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="inputArea">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              />
+              <button onClick={sendMessage}>Send</button>
+            </div>
           </div>
         </div>
       </div>
 
       <style jsx>{`
-        .page {
-  height: 100vh;
-  padding-top: 100px; /* space for floating navbar */
-  background: #020617;
-}
+  .appWrapper {
+    display: flex;
+    height: calc(100vh - 80px);
+    margin-top: 80px;
+    background: #020617;
+    color: white;
+  }
 
-        .layout {
-          display: flex;
-          height: 100%;
-        }
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255,255,255,0.08);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+  }
 
-        .website {
-          flex: 2;
-        }
+  .newChatBtn {
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg,#22c55e,#4ade80);
+    color: #052e16;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
 
-        .iframe {
-          width: 100%;
-          height: 100%;
-          border: none;
-        }
+  .history {
+    flex: 1;
+    overflow-y: auto;
+  }
 
-        .blocked {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          color: #ef4444;
-          text-align: center;
-          padding: 20px;
-          font-weight: bold;
-        }
+  .historyRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
 
-        .copilot {
-          flex: 1;
-          min-width: 380px;
-          display: flex;
-          flex-direction: column;
-          background: rgba(0,0,0,0.85);
-          color: #fff;
-        }
+  .historyItem {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+  }
 
-        .fullscreen {
-          position: fixed;
-          inset: 0;
-          z-index: 9999;
-        }
+  .historyItem:hover {
+    background: rgba(255,255,255,0.1);
+  }
 
-        .header {
-          padding: 16px;
-          display: flex;
-          justify-content: space-between;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
+  .historyItem.active {
+    background: #22c55e;
+    color: black;
+  }
 
-        .online {
-          font-size: 12px;
-          color: #22c55e;
-        }
+  .deleteBtn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 14px;
+  }
 
-        .messages {
-          flex: 1;
-          padding: 16px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
+  /* MAIN */
+  .main {
+    flex: 1;
+  }
 
-        .botMsg {
-          background: rgba(255,255,255,0.1);
-          padding: 12px;
-          border-radius: 12px;
-          max-width: 85%;
-        }
+  .layout {
+    display: flex;
+    height: 100%;
+  }
 
-        .userMsg {
-          background: linear-gradient(135deg,#22c55e,#4ade80);
-          color: #052e16;
-          align-self: flex-end;
-          padding: 12px;
-          border-radius: 12px;
-          max-width: 85%;
-        }
+  /* WEBSITE */
+  .website {
+    flex: 2.2;
+    border-right: 1px solid rgba(255,255,255,0.05);
+  }
 
-        .time {
-          font-size: 11px;
-          opacity: 0.6;
-          margin-top: 6px;
-          text-align: right;
-        }
+  .iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
 
-        .inputArea {
-          display: flex;
-          gap: 8px;
-          padding: 14px;
-          border-top: 1px solid rgba(255,255,255,0.1);
-        }
+  /* CHAT */
+  .copilot {
+    flex: 1.2;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+  }
 
-        .inputArea input {
-          flex: 1;
-          padding: 12px;
-          border-radius: 10px;
-          border: none;
-          background: rgba(255,255,255,0.15);
-          color: #fff;
-        }
+  /* MESSAGES */
+  .messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
-        .inputArea button {
-          padding: 10px 14px;
-          border-radius: 10px;
-          border: none;
-          background: linear-gradient(135deg,#22c55e,#4ade80);
-          color: #052e16;
-          font-weight: 600;
-          cursor: pointer;
-        }
+  .botMsg {
+    background: rgba(255,255,255,0.08);
+    padding: 12px;
+    border-radius: 12px;
+    max-width: 85%;
+    font-size: 14px;
+    line-height: 1.4;
+  }
 
-        @media (max-width:1100px){
-          .website{
-            display:none;
-          }
+  .userMsg {
+    background: linear-gradient(135deg,#22c55e,#4ade80);
+    color: #052e16;
+    padding: 12px;
+    border-radius: 12px;
+    max-width: 85%;
+    align-self: flex-end;
+    font-size: 14px;
+    line-height: 1.4;
+  }
 
-          .copilot{
-            min-width:100%;
-          }
-        }
-      `}</style>
+  /* INPUT */
+  .inputArea {
+    display: flex;
+    gap: 8px;
+    padding: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.7);
+  }
+
+  .inputArea input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 14px;
+  }
+
+  .inputArea input::placeholder {
+    color: #aaa;
+  }
+
+  .inputArea button {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg,#22c55e,#4ade80);
+    color: #052e16;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* MOBILE */
+  @media (max-width:1100px){
+    .website {
+      display: none;
+    }
+
+    .copilot {
+      max-width: 100%;
+    }
+
+    .sidebar {
+      width: 200px;
+    }
+  }
+`}</style>
     </div>
   );
 }
