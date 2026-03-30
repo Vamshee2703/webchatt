@@ -149,3 +149,9 @@ CORS_ALLOW_HEADERS = [
     "authorization",
     "content-type",
 ]
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-ai-chat",
+    }
+}

@@ -21,6 +21,8 @@ embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 # -----------------------------
 # Crawl Website
 # -----------------------------
+from django.core.cache import cache
+
 @api_view(["POST"])
 def crawl_website(request):
     url = request.data.get("url")
@@ -28,13 +30,24 @@ def crawl_website(request):
     if not url:
         return Response({"error": "URL is required"}, status=400)
 
+    # 🔥 Check cache first
+    cached_data = cache.get(url)
+    if cached_data:
+        return Response({
+            "message": "Loaded from cache",
+            "data": cached_data
+        })
+
     try:
-        index_website_with_crawler(url)
-        return Response({"message": "Website crawled successfully"})
+        data = index_website_with_crawler(url)
+
+        # 🔥 Store in cache (timeout: 1 hour)
+        cache.set(url, data, timeout=3600)
+
+        return Response({"message": "Website crawled successfully", "data": data})
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
-
 # -----------------------------
 # 🔥 Copilot Chat (UPDATED)
 # -----------------------------

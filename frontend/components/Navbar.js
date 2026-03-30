@@ -12,6 +12,7 @@ export default function Navbar() {
     const checkAuth = () => {
       const token = localStorage.getItem("access");
       setIsLoggedIn(!!token);
+      console.log("this is token",token)
     };
 
     checkAuth();

@@ -5,7 +5,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from groq import Groq
-import psycopg2
 import os
 import base64
 import time
@@ -14,17 +13,6 @@ load_dotenv()
 
 # ---------------- GROQ CLIENT ----------------
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# ---------------- POSTGRES CONNECTION ----------------
-conn = psycopg2.connect(
-    host="localhost",
-    database="chatai_db",
-    user="postgres",
-    password="admin",
-    port="5432"
-)
-
-cursor = conn.cursor()
 
 # ---------------- STREAMLIT PAGE ----------------
 st.set_page_config(
@@ -40,8 +28,8 @@ st.caption("Upload a PDF and ask questions.")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "pdf_id" not in st.session_state:
-    st.session_state.pdf_id = None
+if "vectorstore" not in st.session_state:
+    st.session_state.vectorstore = None
 
 # ---------------- LLM FUNCTION ----------------
 def query_llm(prompt):
@@ -69,7 +57,6 @@ def process_pdfs(pdfs):
 
         for page in reader.pages:
             extracted = page.extract_text()
-
             if extracted:
                 text += extracted
 
@@ -97,28 +84,10 @@ pdfs = st.file_uploader(
 
 if pdfs:
 
-    # Save PDF metadata to PostgreSQL
-    if st.session_state.pdf_id is None:
-
-        filename = pdfs[0].name
-
-        cursor.execute(
-            "INSERT INTO pdf_documents (filename) VALUES (%s) RETURNING id",
-            (filename,)
-        )
-
-        pdf_id = cursor.fetchone()[0]
-        conn.commit()
-
-        st.session_state.pdf_id = pdf_id
-
-        st.success(f"PDF stored with ID: {pdf_id}")
-
     # Sidebar preview
     st.sidebar.subheader("📄 PDF Preview")
 
     for pdf in pdfs:
-
         pdf.seek(0)
         base64_pdf = base64.b64encode(pdf.read()).decode("utf-8")
 
@@ -130,9 +99,10 @@ if pdfs:
         st.sidebar.markdown(f"### {pdf.name}", unsafe_allow_html=True)
         st.sidebar.markdown(pdf_display, unsafe_allow_html=True)
 
-    # Build vector store
-    if "vectorstore" not in st.session_state:
-        st.session_state.vectorstore = process_pdfs(pdfs)
+    # Build vector store (only once)
+    if st.session_state.vectorstore is None:
+        with st.spinner("Processing PDF..."):
+            st.session_state.vectorstore = process_pdfs(pdfs)
 
     vectorstore = st.session_state.vectorstore
 
@@ -141,7 +111,6 @@ if pdfs:
 
         if message["role"] == "user":
             st.markdown(f"**You:** {message['content']}")
-
         else:
             st.markdown(f"**Bot:** {message['content']}")
 
@@ -155,16 +124,7 @@ if pdfs:
             "content": query
         })
 
-        # Save user message to DB
-        cursor.execute(
-            "INSERT INTO pdf_chat (pdf_id, role, message) VALUES (%s,%s,%s)",
-            (st.session_state.pdf_id, "user", query)
-        )
-
-        conn.commit()
-
         docs = vectorstore.similarity_search(query, k=5)
-
         context = "\n\n".join(doc.page_content for doc in docs)
 
         prompt = f"""
@@ -180,6 +140,7 @@ Answer:
         with st.spinner("Thinking..."):
             answer = query_llm(prompt)
 
+        # typing animation
         placeholder = st.empty()
         typed = ""
 
@@ -192,11 +153,3 @@ Answer:
             "role": "assistant",
             "content": answer
         })
-
-        # Save bot message
-        cursor.execute(
-            "INSERT INTO pdf_chat (pdf_id, role, message) VALUES (%s,%s,%s)",
-            (st.session_state.pdf_id, "bot", answer)
-        )
-
-        conn.commit()
