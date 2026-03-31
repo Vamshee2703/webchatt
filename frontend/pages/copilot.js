@@ -1,13 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-
 export default function Copilot() {
   const router = useRouter();
   const { url } = router.query;
-
   const API = process.env.NEXT_PUBLIC_API_URL;
-
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [iframeAllowed, setIframeAllowed] = useState(true);
   const [input, setInput] = useState("");
@@ -15,12 +12,9 @@ export default function Copilot() {
   const [loading, setLoading] = useState(false);
   const [showWebsite, setShowWebsite] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
-
   const [sessionId, setSessionId] = useState("");
   const [sessions, setSessions] = useState([]);
-
   const messagesEndRef = useRef(null);
-
   /* Load URL */
   useEffect(() => {
     if (!url) return;

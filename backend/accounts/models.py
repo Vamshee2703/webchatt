@@ -3,10 +3,6 @@ from django.db import models
 from .managers import UserManager
 from django.conf import settings
 
-
-# -----------------------------
-# Custom User
-# -----------------------------
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=True)
@@ -22,10 +18,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-
-# -----------------------------
-# 🔥 NEW: Chat Session
-# -----------------------------
 class ChatSession(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -40,10 +32,6 @@ class ChatSession(models.Model):
     def __str__(self):
         return self.title
 
-
-# -----------------------------
-# Chat Messages (UPDATED)
-# -----------------------------
 class ChatMessage(models.Model):
     ROLE_CHOICES = (
         ("user", "User"),
@@ -56,7 +44,6 @@ class ChatMessage(models.Model):
         related_name="chat_messages"
     )
 
-    # 🔥 NEW (IMPORTANT)
     session = models.ForeignKey(
         ChatSession,
         on_delete=models.CASCADE,
@@ -70,10 +57,6 @@ class ChatMessage(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.role}"
 
-
-# -----------------------------
-# Website Chunks
-# -----------------------------
 class WebsiteChunk(models.Model):
     url = models.URLField()
     content = models.TextField()
@@ -83,10 +66,6 @@ class WebsiteChunk(models.Model):
     def __str__(self):
         return self.content[:80]
 
-
-# -----------------------------
-# Q&A System
-# -----------------------------
 class Question(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)

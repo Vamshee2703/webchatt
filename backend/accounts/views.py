@@ -17,10 +17,6 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-
-# -----------------------------
-# Crawl Website
-# -----------------------------
 from django.core.cache import cache
 
 @api_view(["POST"])
@@ -48,9 +44,7 @@ def crawl_website(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-# -----------------------------
-# 🔥 Copilot Chat (UPDATED)
-# -----------------------------
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def copilot(request):
@@ -61,8 +55,6 @@ def copilot(request):
 
     if not question:
         return Response({"error": "Question is required"}, status=400)
-
-    # 🔥 GET OR CREATE SESSION
     session, created = ChatSession.objects.get_or_create(
         session_id=session_id,
         defaults={
@@ -71,16 +63,12 @@ def copilot(request):
             "title": question[:40]
         }
     )
-
-    # 🔥 SAVE USER MESSAGE
     ChatMessage.objects.create(
         user=request.user,
         session=session,
         role="user",
         content=question
     )
-
-    # 🔥 GET HISTORY (PER SESSION)
     history_messages = ChatMessage.objects.filter(
         session=session
     ).order_by("-created_at")[:6]
@@ -88,8 +76,6 @@ def copilot(request):
     history_text = ""
     for msg in reversed(history_messages):
         history_text += f"{msg.role}: {msg.content}\n"
-
-    # 🔥 EMBEDDING
     question_vector = embedding_model.encode(question)
 
     chunks = WebsiteChunk.objects.filter(url__icontains=url)
@@ -117,11 +103,8 @@ Conversation History:
 Website Content:
 {context}
 """
-
-    # 🔥 ASK LLM
     answer = ask_llm(question, full_context)
 
-    # 🔥 SAVE BOT RESPONSE
     ChatMessage.objects.create(
         user=request.user,
         session=session,
@@ -132,9 +115,7 @@ Website Content:
     return Response({"answer": answer})
 
 
-# -----------------------------
-# 🔥 GET ALL SESSIONS
-# -----------------------------
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_sessions(request):
@@ -152,9 +133,6 @@ def list_sessions(request):
     ])
 
 
-# -----------------------------
-# 🔥 CHAT HISTORY PER SESSION
-# -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def chat_history(request):
@@ -180,10 +158,6 @@ def chat_history(request):
         for c in chats
     ])
 
-
-# -----------------------------
-# 🔥 DELETE SESSION
-# -----------------------------
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_session(request, session_id):
@@ -197,11 +171,6 @@ def delete_session(request, session_id):
     session.delete()
 
     return Response({"message": "Session deleted"})
-
-
-# -----------------------------
-# Signup
-# -----------------------------
 @api_view(["POST"])
 def signup(request):
     serializer = SignupSerializer(data=request.data)
@@ -212,10 +181,6 @@ def signup(request):
 
     return Response(serializer.errors, status=400)
 
-
-# -----------------------------
-# Employee Profile
-# -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsEmployee])
 def employee_me(request):
@@ -226,10 +191,6 @@ def employee_me(request):
         "is_staff": request.user.is_staff,
     })
 
-
-# -----------------------------
-# User Profile
-# -----------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
@@ -241,9 +202,6 @@ def user_profile(request):
         "username": user.username,
         "is_staff": user.is_staff
     })
-# -----------------------------
-# Create Question
-# -----------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_question(request):
@@ -268,10 +226,6 @@ def create_question(request):
         status=status.HTTP_201_CREATED
     )
 
-
-# -----------------------------
-# List Questions
-# -----------------------------
 @api_view(["GET"])
 def list_questions(request):
 
@@ -293,10 +247,6 @@ def list_questions(request):
 
     return Response(data)
 
-
-# -----------------------------
-# Update Question
-# -----------------------------
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_question(request, question_id):
@@ -324,10 +274,6 @@ def update_question(request, question_id):
         "message": "Question updated successfully"
     })
 
-
-# -----------------------------
-# Delete Question
-# -----------------------------
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_question(request, question_id):
@@ -346,10 +292,6 @@ def delete_question(request, question_id):
         "message": "Question deleted successfully"
     })
 
-
-# -----------------------------
-# Post Answer
-# -----------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def post_answer(request, question_id):
@@ -375,9 +317,6 @@ def post_answer(request, question_id):
     })
 
 
-# -----------------------------
-# Get Answers
-# -----------------------------
 @api_view(["GET"])
 def get_answers(request, question_id):
 
@@ -394,10 +333,6 @@ def get_answers(request, question_id):
 
     return Response(data)
 
-
-# -----------------------------
-# Update Answer
-# -----------------------------
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_answer(request, answer_id):
@@ -425,10 +360,6 @@ def update_answer(request, answer_id):
         "message": "Answer updated successfully"
     })
 
-
-# -----------------------------
-# Delete Answer
-# -----------------------------
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_answer(request, answer_id):
@@ -454,9 +385,6 @@ def copilot_extension(request):
     if not question:
         return Response({"error": "Question required"}, status=400)
 
-    # ❗ No authentication here
-
-    # embeddings
     question_vector = embedding_model.encode(question)
 
     chunks = WebsiteChunk.objects.all()
