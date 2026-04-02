@@ -13,11 +13,26 @@ from .services.llm import ask_llm
 from .utils import index_website_with_crawler
 from django.shortcuts import get_object_or_404
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+from google import genai
+import os
+import numpy as np
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+# ✅ Gemini client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
+# -----------------------------
+# Gemini Query Embedding
+# -----------------------------
+def get_query_embedding(text):
+    result = client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=text,
+        config={
+            "task_type": "RETRIEVAL_QUERY"
+        }
+    )
+    return result.embeddings[0].values
 # -----------------------------
 # Crawl Website
 # -----------------------------
@@ -90,8 +105,7 @@ def copilot(request):
         history_text += f"{msg.role}: {msg.content}\n"
 
     # 🔥 EMBEDDING
-    question_vector = embedding_model.encode(question)
-
+    question_vector = np.array(get_query_embedding(question))
     chunks = WebsiteChunk.objects.filter(url__icontains=url)
 
     scores = []
