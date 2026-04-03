@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Login() {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -10,12 +9,10 @@ export default function Login() {
   const router = useRouter();
 
   const handleLogin = async (e) => {
-
-    e.preventDefault(); // prevents page reload
+    e.preventDefault();
     setError("");
 
     try {
-
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/login/`,
         {
@@ -43,23 +40,21 @@ export default function Login() {
   };
 
   return (
-    <div className="page">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
 
-      <div className="blob"></div>
+      <div className="w-[420px] bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-10">
 
-      <div className="auth-card">
+        <form onSubmit={handleLogin} className="flex flex-col gap-4 text-center">
 
-        {/* FORM */}
-        <form className="auth-form" onSubmit={handleLogin}>
+          <h2 className="text-2xl font-semibold">Welcome Back 👋</h2>
 
-          <h2>Welcome Back 👋</h2>
-
-          <p className="auth-subtitle">
+          <p className="text-gray-400 text-sm">
             Login to ContextIQ
           </p>
 
           <input
             placeholder="Email"
+            className="p-3 rounded-lg border border-white/10 bg-white/5 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
             value={email}
             required
             onChange={(e) => setEmail(e.target.value)}
@@ -68,21 +63,27 @@ export default function Login() {
           <input
             type="password"
             placeholder="Password"
+            className="p-3 rounded-lg border border-white/10 bg-white/5 text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500"
             value={password}
             required
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          {/* submit button */}
-          <button type="submit">
+          <button
+            type="submit"
+            className="p-3 rounded-full bg-gradient-to-br from-purple-600 to-purple-800 font-semibold hover:opacity-90 transition"
+          >
             Sign In
           </button>
 
-          {error && <p className="auth-error">{error}</p>}
+          {error && <p className="text-red-500">{error}</p>}
 
-          <div className="auth-link">
+          <div className="text-gray-400 text-sm">
             Don’t have an account?{" "}
-            <span onClick={() => router.push("/signup")}>
+            <span
+              onClick={() => router.push("/signup")}
+              className="text-purple-400 cursor-pointer"
+            >
               Sign up
             </span>
           </div>
@@ -90,7 +91,6 @@ export default function Login() {
         </form>
 
       </div>
-
     </div>
   );
 }

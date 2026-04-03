@@ -1,12 +1,15 @@
 import "../styles/globals.css";
-import "../styles/auth.css";
 import Navbar from "../components/Navbar";
 
 export default function App({ Component, pageProps }) {
   return (
     <>
-      <Navbar />
-      <Component {...pageProps} />
+       <div className="bg-slate-950 min-h-screen text-white">
+        <Navbar />
+     <div className="pt-[80px]">
+        <Component {...pageProps} />
+      </div>
+    </div>
     </>
   );
 }

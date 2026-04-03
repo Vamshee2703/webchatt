@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-export default function FAQ(){
-
+export default function FAQ() {
   const faqs = [
     {
       question: "What is ContextIQ?",
@@ -30,33 +29,37 @@ export default function FAQ(){
     }
   ];
 
-  const [active,setActive] = useState(null);
+  const [active, setActive] = useState(null);
 
-  const toggle = (index)=>{
+  const toggle = (index) => {
     setActive(active === index ? null : index);
   };
 
-  return(
-    <div className="page">
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pt-[120px] flex flex-col items-center">
 
-      <h1>Frequently Asked Questions</h1>
+      <h1 className="mb-10 text-3xl font-bold text-center">
+        Frequently Asked Questions
+      </h1>
 
-      <div className="faq-container">
+      <div className="w-[700px] max-w-[90%]">
 
-        {faqs.map((faq,index)=>(
+        {faqs.map((faq, index) => (
           <div
             key={index}
-            className="faq-item"
-            onClick={()=>toggle(index)}
+            onClick={() => toggle(index)}
+            className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl mb-4 p-4 cursor-pointer hover:bg-white/10 transition"
           >
 
-            <div className="faq-question">
+            <div className="flex justify-between font-semibold">
               {faq.question}
-              <span>{active === index ? "-" : "+"}</span>
+              <span className="ml-2">
+                {active === index ? "-" : "+"}
+              </span>
             </div>
 
             {active === index && (
-              <div className="faq-answer">
+              <div className="mt-3 text-gray-400 leading-relaxed">
                 {faq.answer}
               </div>
             )}
@@ -65,52 +68,6 @@ export default function FAQ(){
         ))}
 
       </div>
-
-      <style jsx>{`
-
-        .page{
-          min-height:100vh;
-          background:#020617;
-          color:white;
-          padding-top:120px;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-        }
-
-        h1{
-          margin-bottom:40px;
-          font-size:36px;
-        }
-
-        .faq-container{
-          width:700px;
-          max-width:90%;
-        }
-
-        .faq-item{
-          background:rgba(255,255,255,0.05);
-          backdrop-filter:blur(12px);
-          border:1px solid rgba(255,255,255,0.1);
-          border-radius:12px;
-          margin-bottom:16px;
-          padding:18px;
-          cursor:pointer;
-        }
-
-        .faq-question{
-          display:flex;
-          justify-content:space-between;
-          font-weight:600;
-        }
-
-        .faq-answer{
-          margin-top:12px;
-          color:#9ca3af;
-          line-height:1.6;
-        }
-
-      `}</style>
 
     </div>
   );

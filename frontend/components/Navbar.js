@@ -3,16 +3,13 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 export default function Navbar() {
-
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-
     const checkAuth = () => {
       const token = localStorage.getItem("access");
       setIsLoggedIn(!!token);
-      console.log("this is token",token)
     };
 
     checkAuth();
@@ -22,7 +19,6 @@ export default function Navbar() {
     return () => {
       router.events.off("routeChangeComplete", checkAuth);
     };
-
   }, [router.events]);
 
   const handleLogout = () => {
@@ -33,154 +29,43 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="navbar">
+    <nav className="fixed top-5 left-1/2 -translate-x-1/2 w-[90%] max-w-[1100px] h-[60px] flex items-center justify-between px-6 bg-slate-900/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-lg z-[9999] text-white">
 
-      {/* LOGO */}
-      <div className="logo" onClick={() => router.push("/")}>
+      <div
+        onClick={() => router.push("/")}
+        className="font-semibold text-lg cursor-pointer"
+      >
         ContextIQ
       </div>
 
-      {/* NAV LINKS */}
-      <div className="nav-links">
-
+      <div className="hidden md:flex gap-6 text-sm">
         <Link href="/">About</Link>
-
         <Link href="/dashboard">Chat</Link>
-
         <Link href="/contact">Contact</Link>
-
         <Link href="/faq">FAQ</Link>
-
       </div>
 
-      {/* AUTH SECTION */}
-      <div className="auth-buttons">
-
+      <div className="flex gap-2">
         {!isLoggedIn ? (
           <>
-            <button
-              className="login"
-              onClick={() => router.push("/login")}
-            >
+            <button onClick={() => router.push("/login")} className="px-4 py-2 border rounded-full">
               Login
             </button>
-
-            <button
-              className="signup"
-              onClick={() => router.push("/signup")}
-            >
+            <button onClick={() => router.push("/signup")} className="px-4 py-2 bg-purple-600 rounded-full">
               Sign up
             </button>
           </>
         ) : (
           <>
-            <button
-              className="profile"
-              onClick={() => router.push("/profile")}
-            >
+            <button onClick={() => router.push("/profile")} className="px-4 py-2 bg-white/10 rounded-full">
               Profile
             </button>
-
-            <button
-              className="logout"
-              onClick={handleLogout}
-            >
+            <button onClick={handleLogout} className="px-4 py-2 bg-red-500 rounded-full">
               Logout
             </button>
           </>
         )}
-
       </div>
-
-      <style jsx>{`
-
-        .navbar{
-          position:fixed;
-          top:20px;
-          left:50%;
-          transform:translateX(-50%);
-          width:85%;
-          max-width:1100px;
-          height:60px;
-
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-
-          padding:0 25px;
-
-          background:rgba(20,20,30,0.6);
-          backdrop-filter:blur(12px);
-
-          border-radius:12px;
-          z-index:1000;
-        }
-
-        .logo{
-          color:white;
-          font-size:18px;
-          font-weight:600;
-          cursor:pointer;
-        }
-
-        .nav-links{
-          display:flex;
-          gap:25px;
-        }
-
-        .nav-links a{
-          color:white;
-          text-decoration:none;
-          font-size:14px;
-          font-weight:500;
-        }
-
-        .nav-links a:hover{
-          color:#a78bfa;
-        }
-
-        .auth-buttons{
-          display:flex;
-          gap:10px;
-        }
-
-        .login{
-          background:transparent;
-          border:1px solid #444;
-          color:white;
-          padding:8px 14px;
-          border-radius:20px;
-          cursor:pointer;
-        }
-
-        .signup{
-          background:linear-gradient(135deg,#7c3aed,#6d28d9);
-          border:none;
-          color:white;
-          padding:8px 16px;
-          border-radius:20px;
-          cursor:pointer;
-        }
-
-        .profile{
-          background:rgba(255,255,255,0.1);
-          border:none;
-          color:white;
-          padding:8px 14px;
-          border-radius:20px;
-          cursor:pointer;
-        }
-
-        .logout{
-          background:#ef4444;
-          border:none;
-          color:white;
-          padding:8px 16px;
-          border-radius:20px;
-          cursor:pointer;
-        }
-
-      `}</style>
 
     </nav>
   );

@@ -12,75 +12,45 @@ export default function Dashboard() {
   }, [router]);
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2>Ask Anything From Websites or PDFs</h2>
-          <div style={styles.buttonRow}>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+
+      <div className="w-full max-w-md text-center">
+
+        <div className="bg-black text-white p-8 rounded-2xl shadow-xl flex flex-col gap-4">
+
+          <h2 className="text-xl font-semibold">
+            Ask Anything From Websites or PDFs
+          </h2>
+
+          <div className="flex gap-3 justify-center">
+
             <button
-              style={styles.button}
               onClick={() => router.push("/webchat")}
+              className="flex-1 p-3 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 font-semibold hover:opacity-90 transition"
             >
               Web Chat
             </button>
 
             <button
-              style={styles.button}
               onClick={() => window.open("http://localhost:8501", "_blank")}
+              className="flex-1 p-3 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 font-semibold hover:opacity-90 transition"
             >
               PDF Chat
             </button>
-            
-            <button style={styles.button}
-            onClick={() => router.push("/forum")}>
-Discussion Forum
-</button>
+
+            <button
+              onClick={() => router.push("/forum")}
+              className="flex-1 p-3 rounded-lg bg-gradient-to-br from-purple-600 to-purple-800 font-semibold hover:opacity-90 transition"
+            >
+              Forum
+            </button>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  container: {
-    width: "100%",
-    maxWidth: "500px",
-    textAlign: "center",
-  },
-
-  card: {
-    background: "#000",
-    color: "#fff",
-    padding: "30px",
-    borderRadius: "16px",
-    boxShadow: "0 15px 40px rgba(0,0,0,0.4)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-
-  buttonRow: {
-    display: "flex",
-    gap: "12px",
-    justifyContent: "center",
-  },
-
-  button: {
-    flex: 1,
-    padding: "12px",
-    borderRadius: "10px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "600",
-    background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
-    color: "#ffffff",
-  },
-};
