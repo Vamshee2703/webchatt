@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.http import HttpResponse
 def home(request):
     return HttpResponse("🚀 Backend is running!")
 urlpatterns = [
