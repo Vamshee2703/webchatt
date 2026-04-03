@@ -4,8 +4,10 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-
+def home(request):
+    return HttpResponse("🚀 Backend is running!")
 urlpatterns = [
+    path('', home),
     path('admin/', admin.site.urls),
 
     # AUTH
