@@ -1,31 +1,49 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-from sentence_transformers import SentenceTransformer
+from google import genai
+import os
 from .models import WebsiteChunk
 
+# ✅ Initialize Gemini
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# -----------------------------
+# Gemini Embedding (FIXED)
+# -----------------------------
+def get_embedding(text):
+    try:
+        formatted = f"title: none | text: {text}"
+
+        response = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=formatted
+        )
+
+        return list(response.embeddings[0].values)
+
+    except Exception as e:
+        print("🔥 EMBEDDING ERROR:", str(e))
+        return None
 
 
 # -----------------------------
 # Extract clean text
 # -----------------------------
 def extract_text(url):
-
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # remove unwanted tags
         for tag in soup(["script", "style", "noscript", "nav", "footer", "header"]):
             tag.decompose()
 
         text = soup.get_text(separator=" ")
-
         return " ".join(text.split())
 
-    except Exception:
+    except Exception as e:
+        print("❌ TEXT ERROR:", str(e))
         return ""
 
 
@@ -33,30 +51,31 @@ def extract_text(url):
 # Get internal links
 # -----------------------------
 def get_internal_links(url, base_domain):
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    response = requests.get(url, timeout=10)
-    soup = BeautifulSoup(response.text, "html.parser")
+        links = set()
 
-    links = set()
+        for tag in soup.find_all("a", href=True):
+            href = tag["href"]
+            full_url = urljoin(url, href)
+            parsed = urlparse(full_url)
 
-    for tag in soup.find_all("a", href=True):
+            if parsed.netloc == base_domain:
+                links.add(full_url.split("#")[0])
 
-        href = tag["href"]
-        full_url = urljoin(url, href)
+        return list(links)
 
-        parsed = urlparse(full_url)
-
-        if parsed.netloc == base_domain:
-            links.add(full_url.split("#")[0])
-
-    return list(links)
+    except Exception as e:
+        print("❌ LINK ERROR:", str(e))
+        return []
 
 
 # -----------------------------
 # Chunk text
 # -----------------------------
 def chunk_text(text, chunk_size=200):
-
     words = text.split()
 
     return [
@@ -97,7 +116,10 @@ def index_website_with_crawler(start_url):
 
         for chunk in chunks:
 
-            vector = embedding_model.encode(chunk).tolist()
+            vector = get_embedding(chunk)
+
+            if vector is None:
+                continue  # skip failed embeddings
 
             WebsiteChunk.objects.create(
                 url=url,
@@ -112,3 +134,5 @@ def index_website_with_crawler(start_url):
                 to_visit.append(link)
 
     print("✅ Crawling and indexing completed")
+
+    return {"status": "success"}

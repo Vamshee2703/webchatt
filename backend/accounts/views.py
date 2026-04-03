@@ -5,20 +5,39 @@ from rest_framework import status
 from groq import Groq
 import os
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from google import genai
+
 from .models import ChatMessage, WebsiteChunk, Question, Answer, ChatSession
 from .permissions import IsEmployee
 from .serializers import SignupSerializer
 from .services.llm import ask_llm
 from .utils import index_website_with_crawler
 from django.shortcuts import get_object_or_404
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
 from django.core.cache import cache
 
+
+# =============================
+# ✅ Clients
+# =============================
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
+# =============================
+# ✅ Gemini Query Embedding
+# =============================
+def get_query_embedding(text):
+    result = genai_client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=text,
+        config={"task_type": "RETRIEVAL_QUERY"}
+    )
+    return np.array(result.embeddings[0].values)
+
+
+# =============================
+# 🌐 Crawl Website
+# =============================
 @api_view(["POST"])
 def crawl_website(request):
     url = request.data.get("url")
@@ -26,7 +45,6 @@ def crawl_website(request):
     if not url:
         return Response({"error": "URL is required"}, status=400)
 
-    # 🔥 Check cache first
     cached_data = cache.get(url)
     if cached_data:
         return Response({
@@ -36,8 +54,6 @@ def crawl_website(request):
 
     try:
         data = index_website_with_crawler(url)
-
-        # 🔥 Store in cache (timeout: 1 hour)
         cache.set(url, data, timeout=3600)
 
         return Response({"message": "Website crawled successfully", "data": data})
@@ -45,6 +61,10 @@ def crawl_website(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
+
+# =============================
+# 🤖 Copilot (MAIN CHAT)
+# =============================
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def copilot(request):
@@ -55,7 +75,9 @@ def copilot(request):
 
     if not question:
         return Response({"error": "Question is required"}, status=400)
-    session, created = ChatSession.objects.get_or_create(
+
+    # Session
+    session, _ = ChatSession.objects.get_or_create(
         session_id=session_id,
         defaults={
             "user": request.user,
@@ -63,12 +85,16 @@ def copilot(request):
             "title": question[:40]
         }
     )
+
+    # Save user message
     ChatMessage.objects.create(
         user=request.user,
         session=session,
         role="user",
         content=question
     )
+
+    # History
     history_messages = ChatMessage.objects.filter(
         session=session
     ).order_by("-created_at")[:6]
@@ -76,35 +102,55 @@ def copilot(request):
     history_text = ""
     for msg in reversed(history_messages):
         history_text += f"{msg.role}: {msg.content}\n"
-    question_vector = embedding_model.encode(question)
 
-    chunks = WebsiteChunk.objects.filter(url__icontains=url)
+    # 🔥 Gemini embedding
+    question_vector = get_query_embedding(question)
 
-    scores = []
+    # 🔥 Load chunks (LIMIT for speed)
+    chunks = WebsiteChunk.objects.filter(url__icontains=url)[:200]
+
+    chunk_vectors = []
+    chunk_texts = []
 
     for chunk in chunks:
-        chunk_vector = np.array(chunk.embedding)
+        chunk_vectors.append(chunk.embedding)
+        chunk_texts.append(chunk.content)
 
-        similarity = np.dot(question_vector, chunk_vector) / (
-            np.linalg.norm(question_vector) * np.linalg.norm(chunk_vector)
-        )
+    chunk_vectors = np.array(chunk_vectors)
 
-        scores.append((similarity, chunk.content))
+    # Normalize
+    question_vector = question_vector / np.linalg.norm(question_vector)
+    chunk_vectors = chunk_vectors / np.linalg.norm(chunk_vectors, axis=1, keepdims=True)
 
-    scores.sort(reverse=True)
+    # Fast similarity
+    similarities = np.dot(chunk_vectors, question_vector)
 
-    top_chunks = [content for _, content in scores[:5]]
-    context = "\n".join(top_chunks)
+    # Top results
+    top_k_idx = np.argsort(similarities)[-5:][::-1]
+    top_chunks = [chunk_texts[i] for i in top_k_idx]
+
+    # Better context
+    context = "\n\n".join([
+        f"Chunk {i+1}: {chunk}" for i, chunk in enumerate(top_chunks)
+    ])
 
     full_context = f"""
+You are an AI assistant.
+
+Answer ONLY from the given context.
+If not found, say "Not found in website".
+
 Conversation History:
 {history_text}
 
 Website Content:
 {context}
 """
+
+    # 🔥 Groq LLM
     answer = ask_llm(question, full_context)
 
+    # Save bot response
     ChatMessage.objects.create(
         user=request.user,
         session=session,
@@ -115,7 +161,43 @@ Website Content:
     return Response({"answer": answer})
 
 
+# =============================
+# ⚡ Extension API
+# =============================
+@api_view(["POST"])
+def copilot_extension(request):
 
+    question = request.data.get("question", "").strip()
+
+    if not question:
+        return Response({"error": "Question required"}, status=400)
+
+    question_vector = get_query_embedding(question)
+
+    chunks = WebsiteChunk.objects.all()[:200]
+
+    chunk_vectors = []
+    chunk_texts = []
+
+    for chunk in chunks:
+        chunk_vectors.append(chunk.embedding)
+        chunk_texts.append(chunk.content)
+
+    chunk_vectors = np.array(chunk_vectors)
+
+    question_vector = question_vector / np.linalg.norm(question_vector)
+    chunk_vectors = chunk_vectors / np.linalg.norm(chunk_vectors, axis=1, keepdims=True)
+
+    similarities = np.dot(chunk_vectors, question_vector)
+
+    top_k_idx = np.argsort(similarities)[-5:][::-1]
+    top_chunks = [chunk_texts[i] for i in top_k_idx]
+
+    context = "\n\n".join(top_chunks)
+
+    answer = ask_llm(question, context)
+
+    return Response({"answer": answer})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_sessions(request):
@@ -377,34 +459,3 @@ def delete_answer(request, answer_id):
     return Response({
         "message": "Answer deleted successfully"
     })
-@api_view(["POST"])
-def copilot_extension(request):
-
-    question = request.data.get("question", "").strip()
-
-    if not question:
-        return Response({"error": "Question required"}, status=400)
-
-    question_vector = embedding_model.encode(question)
-
-    chunks = WebsiteChunk.objects.all()
-
-    scores = []
-
-    for chunk in chunks:
-        chunk_vector = np.array(chunk.embedding)
-
-        similarity = np.dot(question_vector, chunk_vector) / (
-            np.linalg.norm(question_vector) * np.linalg.norm(chunk_vector)
-        )
-
-        scores.append((similarity, chunk.content))
-
-    scores.sort(reverse=True)
-    top_chunks = [content for _, content in scores[:5]]
-
-    context = "\n".join(top_chunks)
-
-    answer = ask_llm(question, context)
-
-    return Response({"answer": answer})
