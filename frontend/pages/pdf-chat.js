@@ -3,6 +3,10 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 
+const styles = {
+  page: {}
+};
+
 export default function PDFChat() {
 
   const router = useRouter();
@@ -11,7 +15,7 @@ export default function PDFChat() {
 
     const token = localStorage.getItem("access");
 
-    console.log("JWT TOKEN:", token);  // 👈 ADD THIS
+    console.log("JWT TOKEN:", token);
 
     if (!token) {
       router.push("/login");
