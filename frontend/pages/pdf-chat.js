@@ -1,7 +1,3 @@
-// fix deploy
-const styles = {
-  page: {}
-};
 "use client";
 
 import { useRouter } from "next/router";
@@ -27,7 +23,7 @@ export default function PDFChat() {
   }, [router]);
 
   return (
-    <div style={styles.page}>
+    <div>
       <h1>📄 PDF Chat</h1>
       <p>Redirecting to PDF chat...</p>
     </div>
