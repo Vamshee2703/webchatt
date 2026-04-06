@@ -33,20 +33,23 @@ export default function WebChat() {
     try {
       setLoading(true);
 
-      const res = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/crawl/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ url: formattedUrl }),
-      });
+      const res = await fetch(
+  `${process.env.NEXT_PUBLIC_API_URL}/api/crawl/`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ url: formattedUrl }),
+  }
+);
 
-      if (!res.ok) {
-        setError("Website not reachable or crawl failed");
-        setLoading(false);
-        return;
-      }
+if (!res.ok) {
+  setError("Website not reachable or crawl failed");
+  setLoading(false);
+  return;
+}
 
       router.push(`/copilot?url=${encodeURIComponent(formattedUrl)}`);
 
