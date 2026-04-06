@@ -5,7 +5,6 @@ from rest_framework import status
 from groq import Groq
 import os
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from .models import ChatMessage, WebsiteChunk, Question, Answer, ChatSession
 from .permissions import IsEmployee
 from .serializers import SignupSerializer
