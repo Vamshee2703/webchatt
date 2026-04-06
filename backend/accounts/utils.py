@@ -1,8 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-from google import genai
-import os
+import google.generativeai as genai
 from .models import WebsiteChunk
 
 
