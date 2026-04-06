@@ -11,30 +11,30 @@ from .serializers import SignupSerializer
 from .services.llm import ask_llm
 from .utils import index_website_with_crawler
 from django.shortcuts import get_object_or_404
-import google.generativeai as genai
+
+from google import genai
 import os
 import numpy as np
 
-# ✅ Configure Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# ✅ Gemini client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # -----------------------------
 # Gemini Query Embedding
 # -----------------------------
 def get_query_embedding(text):
-    try:
-        result = genai.embed_content(
-            model="models/embedding-001",
-            content=text,
-            task_type="retrieval_query"
-        )
-
-        return result["embedding"]
-
-    except Exception as e:
-        print("Query embedding error:", e)
-        return None
+    result = client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=text,
+        config={
+            "task_type": "RETRIEVAL_QUERY"
+        }
+    )
+    return result.embeddings[0].values
+# -----------------------------
+# Crawl Website
+# -----------------------------
 from django.core.cache import cache
 
 @api_view(["POST"])

@@ -1,32 +1,37 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
-import google.generativeai as genai
+from google import genai
 import os
 from .models import WebsiteChunk
-import google.generativeai as genai
-import os
 
-# ✅ Configure Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+# ✅ Gemini client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # -----------------------------
-# Gemini Embedding
+# Gemini Document Embedding
 # -----------------------------
 def get_embedding(text):
     try:
-        result = genai.embed_content(
-            model="models/embedding-001",
-            content=text,
-            task_type="retrieval_document"
+        result = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=text,
+            config={
+                "task_type": "RETRIEVAL_DOCUMENT"
+            }
         )
-
-        return result["embedding"]
+        return result.embeddings[0].values
 
     except Exception as e:
         print("Embedding error:", e)
         return None
+
+
+# -----------------------------
+# Extract clean text
+# -----------------------------
 def extract_text(url):
     try:
         response = requests.get(url, timeout=10)
