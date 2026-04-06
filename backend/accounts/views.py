@@ -52,16 +52,16 @@ def crawl_website(request):
             "data": cached_data
         })
 
-    # 🔥 Run crawler in background
-    import threading
-    threading.Thread(
-        target=index_website_with_crawler,
-        args=(url,)
-    ).start()
+    try:
+        data = index_website_with_crawler(url)
 
-    return Response({
-        "message": "Crawling started"
-    })
+        # 🔥 Store in cache (timeout: 1 hour)
+        cache.set(url, data, timeout=3600)
+
+        return Response({"message": "Website crawled successfully", "data": data})
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 # -----------------------------
 # 🔥 Copilot Chat (UPDATED)
 # -----------------------------
