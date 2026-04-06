@@ -33,7 +33,7 @@ export default function WebChat() {
     try {
       setLoading(true);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/crawl/`, {
+      const res = fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/crawl/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
